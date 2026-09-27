@@ -21,6 +21,8 @@ await context.route("https://nominatim.openstreetmap.org/**", route => route.ful
   contentType: "application/json",
   body: JSON.stringify({
     address: {
+      house_number: "321",
+      road: "Rua Teste GPS",
       suburb: "Centro",
       city: "Francisco Beltrão",
       state: "Paraná",
@@ -64,8 +66,8 @@ try {
   await page.waitForFunction(() => document.querySelector("#neighborhoodSelect")?.value === "centro");
   ok((await page.locator("#neighborhoodSelect").inputValue()) === "centro", "GPS identifica Centro automaticamente");
   ok((await page.locator("#locationStatus").innerText()).includes("R$"), "GPS mostra a taxa aplicada");
-  await page.locator("#streetInput").fill("Rua Teste");
-  await page.locator("#numberInput").fill("123");
+  ok((await page.locator("#streetInput").inputValue()) === "Rua Teste GPS", "GPS preenche a rua automaticamente");
+  ok((await page.locator("#numberInput").inputValue()) === "321", "GPS preenche o número automaticamente");
   ok((await page.locator("#checkoutTotal").innerText()).includes("31,00"), "Taxa do Centro soma R$ 10");
   ok((await page.locator("#paymentHelp").innerText()).includes("aguardando"), "Checkout explica o fluxo do PIX");
 
