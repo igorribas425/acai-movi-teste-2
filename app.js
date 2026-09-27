@@ -1,7 +1,7 @@
 (() => {
   const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const STORAGE_KEY = "acai-movi-cart-v4";
-  const whatsappUrl = "https://wa.me/message/KONPQZAX7CH2L1";
+  const whatsappUrl = "https://wa.me/554688227757";
 
   const defaults = {
     store: {
