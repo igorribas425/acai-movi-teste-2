@@ -22,11 +22,29 @@
     </section>
 
     <section class="dashboard" id="dashboard" hidden>
-      <aside class="sidebar"><div class="side-brand"><img src="images/logo.png" alt="" /><div><strong>Açaí Moví</strong><small>Admin</small></div></div><nav><button class="active" data-tab="products">Produtos</button><button data-tab="complements">Complementos</button><button data-tab="zones">Entrega</button><button data-tab="store">Loja</button></nav><button class="logout" id="logoutBtn">Sair</button></aside>
+      <aside class="sidebar"><div class="side-brand"><img src="images/logo.png" alt="" /><div><strong>Açaí Moví</strong><small>Admin</small></div></div><nav><button class="active" data-tab="orders">Pedidos</button><button data-tab="products">Produtos</button><button data-tab="complements">Complementos</button><button data-tab="zones">Entrega</button><button data-tab="store">Loja</button></nav><button class="logout" id="logoutBtn">Sair</button></aside>
       <div class="dashboard-main">
-        <header class="admin-top"><div><span>Painel administrativo</span><h1 id="sectionTitle">Produtos</h1></div><div class="admin-status">● conectado</div></header>
+        <header class="admin-top"><div><span>Painel administrativo</span><h1 id="sectionTitle">Pedidos</h1></div><div class="admin-status">● conectado</div></header>
 
-        <section class="admin-section active" data-section="products"><div class="toolbar"><p>Edite preços, fotos, descrições, limites de complementos e disponibilidade.</p><button id="addProductBtn">+ Novo produto</button></div><div class="cards-grid" id="productsAdmin"></div></section>
+        <section class="admin-section active" data-section="orders">
+          <div class="orders-kpis" id="ordersSummary"></div>
+          <div class="toolbar orders-toolbar">
+            <p>Pedidos feitos no site aparecem aqui antes de o cliente abrir o WhatsApp.</p>
+            <button id="refreshOrdersBtn" type="button">Atualizar pedidos</button>
+          </div>
+          <div class="order-filters" id="orderFilters">
+            <button class="active" type="button" data-order-filter="open">Em andamento</button>
+            <button type="button" data-order-filter="new">Novos</button>
+            <button type="button" data-order-filter="preparing">Preparando</button>
+            <button type="button" data-order-filter="out_for_delivery">Em entrega</button>
+            <button type="button" data-order-filter="delivered">Entregues</button>
+            <button type="button" data-order-filter="cancelled">Cancelados</button>
+            <button type="button" data-order-filter="all">Todos</button>
+          </div>
+          <div class="orders-list" id="ordersAdmin"></div>
+        </section>
+
+        <section class="admin-section" data-section="products"><div class="toolbar"><p>Edite preços, fotos, descrições, limites de complementos e disponibilidade.</p><button id="addProductBtn">+ Novo produto</button></div><div class="cards-grid" id="productsAdmin"></div></section>
         <section class="admin-section" data-section="complements"><div class="toolbar"><p>Gerencie os complementos inclusos e os extras pagos.</p><button id="addComplementBtn">+ Novo complemento</button></div><div class="table-card"><div class="table-head"><span>Nome</span><span>Preço</span><span>Ativo</span><span></span></div><div id="complementsAdmin"></div></div></section>
         <section class="admin-section" data-section="zones"><div class="toolbar"><p>Altere as taxas de entrega de qualquer bairro.</p><button id="addZoneBtn">+ Novo bairro</button></div><div class="table-card"><div class="table-head"><span>Bairro</span><span>Taxa</span><span>Ativo</span><span></span></div><div id="zonesAdmin"></div></div></section>
         <section class="admin-section" data-section="store"><div class="toolbar"><p>Informações que aparecem no site e no fechamento do pedido.</p></div><form class="settings-card" id="storeForm"><label>Nome da loja<input name="store_name" /></label><div class="two"><label>Cidade<input name="city" /></label><label>Estado<input name="state" /></label></div><label>Instagram<input name="instagram_url" /></label><label>WhatsApp<input name="whatsapp_url" /></label><div class="two"><label>Abertura<input name="opens_at" type="time" /></label><label>Fechamento<input name="closes_at" type="time" /></label></div><button type="submit">Salvar dados da loja</button></form></section>
@@ -36,7 +54,7 @@
 
   <div class="admin-toast" id="adminToast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260927-2"></script>
-  <script src="admin.js?v=20260927-2"></script>
+  <script src="config.js?v=20260927-4"></script>
+  <script src="admin.js?v=20260927-4"></script>
 </body>
 </html>
