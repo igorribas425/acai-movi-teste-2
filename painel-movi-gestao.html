@@ -18,7 +18,7 @@
     </section>
 
     <section class="login-screen" id="loginScreen" hidden>
-      <form class="login-card" id="loginForm"><img src="images/logo.png" alt="Açaí Moví" /><span>Painel administrativo</span><h1>Entrar</h1><p>Use o e-mail autorizado para administrar o cardápio.</p><label>E-mail<input id="loginEmail" type="email" required /></label><label>Senha<input id="loginPassword" type="password" required /></label><button type="submit">Entrar no painel</button><small id="loginError"></small><a href="index.html">← Voltar ao site</a></form>
+      <form class="login-card" id="loginForm"><img src="images/logo.png" alt="Açaí Moví" /><span>Painel administrativo</span><h1>Entrar</h1><p>Use o e-mail autorizado para administrar o cardápio.</p><label>E-mail<input id="loginEmail" type="email" required autocomplete="email" /></label><label>Senha<input id="loginPassword" type="password" required autocomplete="current-password" /></label><button type="submit">Entrar no painel</button><button class="secondary-login" id="firstAccessBtn" type="button">Primeiro acesso</button><small id="loginError"></small><div class="first-access-help" id="firstAccessHelp" hidden>Para o primeiro acesso, informe seu e-mail e a senha que deseja usar. Você receberá uma confirmação no e-mail. Depois de confirmar, volte aqui e entre normalmente.</div><a href="index.html">← Voltar ao site</a></form>
     </section>
 
     <section class="dashboard" id="dashboard" hidden>
