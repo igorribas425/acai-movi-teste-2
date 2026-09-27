@@ -76,6 +76,15 @@
     render(data[0]);
   }
 
+  async function loadStoreContact(){
+    try{
+      const {data,error}=await client.from("store_settings").select("data").eq("id","main").maybeSingle();
+      const url=!error && data?.data?.whatsapp_url ? data.data.whatsapp_url : "https://wa.me/message/KONPQZAX7CH2L1";
+      const btn=$("contactStoreBtn");
+      if(btn) btn.href=url;
+    }catch{}
+  }
+
   async function confirmDelivery(){
     if(!current || current.status !== "out_for_delivery") return;
     const btn = $("confirmDeliveryBtn");
@@ -98,7 +107,7 @@
     }
     client = window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $("confirmDeliveryBtn").addEventListener("click",confirmDelivery);
-    await load();
+    await Promise.all([load(),loadStoreContact()]);
     setInterval(load,12000);
   }
 
