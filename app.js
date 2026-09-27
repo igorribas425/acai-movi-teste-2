@@ -325,6 +325,15 @@
 
   function changeItemQty(key, delta) { cart = cart.flatMap(i => i.key !== key ? [i] : (i.quantity + delta <= 0 ? [] : [{...i,quantity:i.quantity+delta}])); saveCart(); }
 
+  function renderPaymentHelp() {
+    const text = payment === "pix"
+      ? "<strong>PIX:</strong> o pedido fica aguardando a confirmação do pagamento. Depois que a equipe confirmar, ele entra em preparo."
+      : payment === "card"
+        ? "<strong>Cartão:</strong> pagamento na entrega. A equipe pode iniciar o preparo antes do pagamento."
+        : "<strong>Dinheiro:</strong> pagamento na entrega. Informe o troco se precisar.";
+    $("paymentHelp").innerHTML = text;
+  }
+
   function renderSummary() {
     if (!cart.length) return;
     const fee = deliveryFee();
@@ -516,7 +525,7 @@
     $("openCartBtn").addEventListener("click",openCart); $("mobileCartBar").addEventListener("click",openCart); $("closeCartBtn").addEventListener("click",closeCart); $("cartOverlay").addEventListener("click",e=>{if(e.target===$("cartOverlay"))closeCart();});
     $("deliveryPreviewBtn").addEventListener("click",()=>{openCart();setTimeout(()=>$("neighborhoodSelect").focus(),100);});
     qsa("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{deliveryMode=btn.dataset.mode;qsa("[data-mode]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
-    qsa("[data-payment]").forEach(btn=>btn.addEventListener("click",()=>{payment=btn.dataset.payment;qsa("[data-payment]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
+    qsa("[data-payment]").forEach(btn=>btn.addEventListener("click",()=>{payment=btn.dataset.payment;qsa("[data-payment]").forEach(x=>x.classList.toggle("active",x===btn));renderPaymentHelp();renderSummary();}));
     $("neighborhoodSelect").addEventListener("change",renderSummary);
     $("useLocationBtn").addEventListener("click",useCurrentLocation);
     $("finishOrderBtn").addEventListener("click",finishOrder);
@@ -525,7 +534,7 @@
 
   async function init() {
     await loadRemoteCatalog();
-    renderProducts(); renderComplementShowcase(); renderZones(); renderCartBadge(); renderCart(); storeHour(); bindEvents();
+    renderProducts(); renderComplementShowcase(); renderZones(); renderCartBadge(); renderCart(); renderPaymentHelp(); storeHour(); bindEvents();
     setInterval(storeHour,60000);
   }
   init();
