@@ -93,7 +93,7 @@ try {
   ok((await page.locator("#freeCounter").innerText()) === "6/6", "Marmita exige 6 complementos");
   ok(!(await page.locator("#addToCartBtn").isDisabled()), "Marmita libera com 6 complementos");
 
-  await page.goto(base + "/admin.html", { waitUntil: "networkidle" });
+  await page.goto(base + "/painel-movi-gestao.html", { waitUntil: "networkidle" });
   ok(await page.locator("#loginScreen").isVisible(), "Painel ADM conectado e exige login");
   ok(await page.locator("#setupScreen").isHidden(), "Painel não está em modo sem banco");
 
