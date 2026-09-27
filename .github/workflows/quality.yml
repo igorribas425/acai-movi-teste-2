@@ -1,0 +1,32 @@
+name: Quality checks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: JavaScript syntax
+        run: |
+          node --check app.js
+          node --check admin.js
+          node --check config.js
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start local site
+        run: |
+          python3 -m http.server 4173 > /tmp/acai-http.log 2>&1 &
+          echo $! > /tmp/acai-http.pid
+          sleep 2
+      - name: Run delivery E2E
+        run: node tests/e2e.mjs
