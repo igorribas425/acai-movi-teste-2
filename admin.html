@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#3c0d4c" />
+  <title>Admin | Açaí Moví</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <main class="admin-app">
+    <section class="setup-screen" id="setupScreen" hidden>
+      <div class="setup-card"><img src="images/logo.png" alt="Açaí Moví" /><span>Painel administrativo</span><h1>Quase pronto.</h1><p>O painel já está construído. Falta apenas conectar o Supabase para as mudanças ficarem salvas para todos os clientes, com login seguro e upload de fotos.</p><a href="index.html">Voltar ao site</a></div>
+    </section>
+
+    <section class="login-screen" id="loginScreen" hidden>
+      <form class="login-card" id="loginForm"><img src="images/logo.png" alt="Açaí Moví" /><span>Painel administrativo</span><h1>Entrar</h1><p>Use o e-mail autorizado para administrar o cardápio.</p><label>E-mail<input id="loginEmail" type="email" required /></label><label>Senha<input id="loginPassword" type="password" required /></label><button type="submit">Entrar no painel</button><small id="loginError"></small><a href="index.html">← Voltar ao site</a></form>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <aside class="sidebar"><div class="side-brand"><img src="images/logo.png" alt="" /><div><strong>Açaí Moví</strong><small>Admin</small></div></div><nav><button class="active" data-tab="products">Produtos</button><button data-tab="complements">Complementos</button><button data-tab="zones">Entrega</button><button data-tab="store">Loja</button></nav><button class="logout" id="logoutBtn">Sair</button></aside>
+      <div class="dashboard-main">
+        <header class="admin-top"><div><span>Painel administrativo</span><h1 id="sectionTitle">Produtos</h1></div><div class="admin-status">● conectado</div></header>
+
+        <section class="admin-section active" data-section="products"><div class="toolbar"><p>Edite preços, fotos, descrições, limites de complementos e disponibilidade.</p><button id="addProductBtn">+ Novo produto</button></div><div class="cards-grid" id="productsAdmin"></div></section>
+        <section class="admin-section" data-section="complements"><div class="toolbar"><p>Gerencie os complementos inclusos e os extras pagos.</p><button id="addComplementBtn">+ Novo complemento</button></div><div class="table-card"><div class="table-head"><span>Nome</span><span>Preço</span><span>Ativo</span><span></span></div><div id="complementsAdmin"></div></div></section>
+        <section class="admin-section" data-section="zones"><div class="toolbar"><p>Altere as taxas de entrega de qualquer bairro.</p><button id="addZoneBtn">+ Novo bairro</button></div><div class="table-card"><div class="table-head"><span>Bairro</span><span>Taxa</span><span>Ativo</span><span></span></div><div id="zonesAdmin"></div></div></section>
+        <section class="admin-section" data-section="store"><div class="toolbar"><p>Informações que aparecem no site e no fechamento do pedido.</p></div><form class="settings-card" id="storeForm"><label>Nome da loja<input name="store_name" /></label><div class="two"><label>Cidade<input name="city" /></label><label>Estado<input name="state" /></label></div><label>Instagram<input name="instagram_url" /></label><label>WhatsApp<input name="whatsapp_url" /></label><div class="two"><label>Abertura<input name="opens_at" type="time" /></label><label>Fechamento<input name="closes_at" type="time" /></label></div><button type="submit">Salvar dados da loja</button></form></section>
+      </div>
+    </section>
+  </main>
+
+  <div class="admin-toast" id="adminToast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
