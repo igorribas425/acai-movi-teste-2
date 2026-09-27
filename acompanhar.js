@@ -79,7 +79,7 @@
   async function loadStoreContact(){
     try{
       const {data,error}=await client.from("store_settings").select("data").eq("id","main").maybeSingle();
-      const url=!error && data?.data?.whatsapp_url ? data.data.whatsapp_url : "https://wa.me/message/KONPQZAX7CH2L1";
+      const url=!error && data?.data?.whatsapp_url ? data.data.whatsapp_url : "https://wa.me/554688227757";
       const btn=$("contactStoreBtn");
       if(btn) btn.href=url;
     }catch{}
