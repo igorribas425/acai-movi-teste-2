@@ -7,8 +7,11 @@
   if (!ready) { setupScreen.hidden = false; return; }
 
   const db = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-  let products = [], complements = [], zones = [], store = {};
+  let orders = [], products = [], complements = [], zones = [], store = {};
+  let orderFilter = "open";
+  const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const $ = (id) => document.getElementById(id);
+  const money = (value) => BRL.format(Number(value || 0));
   const toast = (msg) => { const el=$("adminToast");el.textContent=msg;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),2200); };
   const esc = (v="") => String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 
@@ -53,18 +56,128 @@
   document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{
     document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===btn));
     document.querySelectorAll("[data-section]").forEach(s=>s.classList.toggle("active",s.dataset.section===btn.dataset.tab));
-    $("sectionTitle").textContent={products:"Produtos",complements:"Complementos",zones:"Entrega",store:"Loja"}[btn.dataset.tab];
+    $("sectionTitle").textContent={orders:"Pedidos",products:"Produtos",complements:"Complementos",zones:"Entrega",store:"Loja"}[btn.dataset.tab];
   }));
 
   async function loadAll(){
-    const [p,c,z,s]=await Promise.all([
+    const [o,p,c,z,s]=await Promise.all([
+      db.from("orders").select("*").order("created_at",{ascending:false}).limit(200),
       db.from("products").select("*").order("sort_order"),
       db.from("complements").select("*").order("sort_order"),
       db.from("delivery_zones").select("*").order("name"),
       db.from("store_settings").select("data").eq("id","main").maybeSingle()
     ]);
-    products=p.data||[]; complements=c.data||[]; zones=z.data||[]; store=s.data?.data||{};
-    renderProducts();renderComplements();renderZones();renderStore();
+    orders=o.data||[]; products=p.data||[]; complements=c.data||[]; zones=z.data||[]; store=s.data?.data||{};
+    renderOrders();renderProducts();renderComplements();renderZones();renderStore();
+  }
+
+  async function loadOrders(silent=false){
+    const {data,error}=await db.from("orders").select("*").order("created_at",{ascending:false}).limit(200);
+    if(error){ if(!silent) toast("Não foi possível atualizar os pedidos."); return; }
+    orders=data||[];
+    renderOrders();
+    if(!silent) toast("Pedidos atualizados.");
+  }
+
+  const orderStatus = {
+    new: "Novo",
+    confirmed: "Confirmado",
+    preparing: "Preparando",
+    out_for_delivery: "Saiu para entrega",
+    delivered: "Entregue",
+    cancelled: "Cancelado"
+  };
+
+  function formatDate(value){
+    if(!value) return "";
+    return new Intl.DateTimeFormat("pt-BR",{
+      timeZone:"America/Sao_Paulo",
+      day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"
+    }).format(new Date(value));
+  }
+
+  function localDay(value){
+    return new Intl.DateTimeFormat("en-CA",{
+      timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"
+    }).format(new Date(value));
+  }
+
+  function filteredOrders(){
+    if(orderFilter==="all") return orders;
+    if(orderFilter==="open") return orders.filter(o=>!["delivered","cancelled"].includes(o.status));
+    if(orderFilter==="preparing") return orders.filter(o=>["confirmed","preparing"].includes(o.status));
+    return orders.filter(o=>o.status===orderFilter);
+  }
+
+  function phoneHref(phone=""){
+    let digits=String(phone).replace(/\D/g,"");
+    if(digits.length===10||digits.length===11) digits="55"+digits;
+    return digits ? "https://wa.me/"+digits : "#";
+  }
+
+  function renderOrderSummary(){
+    const today=localDay(new Date());
+    const todayOrders=orders.filter(o=>localDay(o.created_at)===today && o.status!=="cancelled");
+    const revenue=todayOrders.reduce((sum,o)=>sum+Number(o.total||0),0);
+    const cards=[
+      ["Novos",orders.filter(o=>o.status==="new").length,"Aguardando atendimento"],
+      ["Em preparo",orders.filter(o=>["confirmed","preparing"].includes(o.status)).length,"Confirmados e preparando"],
+      ["Em entrega",orders.filter(o=>o.status==="out_for_delivery").length,"Saíram para entrega"],
+      ["Vendas hoje",money(revenue),todayOrders.length+" pedido(s)"]
+    ];
+    $("ordersSummary").innerHTML=cards.map(([label,value,sub])=>`<article class="order-kpi"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></article>`).join("");
+  }
+
+  function renderOrders(){
+    renderOrderSummary();
+    const list=filteredOrders();
+    if(!list.length){
+      $("ordersAdmin").innerHTML='<div class="orders-empty"><span>📦</span><strong>Nenhum pedido nesta etapa</strong><p>Quando houver pedidos, eles aparecerão aqui automaticamente.</p></div>';
+      return;
+    }
+
+    $("ordersAdmin").innerHTML=list.map(order=>{
+      const items=Array.isArray(order.items)?order.items:[];
+      const address=order.delivery_mode==="pickup"
+        ? "Retirada no local"
+        : [order.street,order.street_number,order.address_complement,order.neighborhood].filter(Boolean).join(", ");
+      const payment=order.payment==="pix"?"PIX":order.payment==="card"?"Cartão":"Dinheiro";
+      const options=Object.entries(orderStatus).map(([value,label])=>`<option value="${value}" ${order.status===value?"selected":""}>${label}</option>`).join("");
+      const itemHtml=items.map(item=>{
+        const included=Array.isArray(item.included)?item.included.join(", "):"";
+        const extras=Array.isArray(item.extras)?item.extras.map(x=>x?.name||x).filter(Boolean).join(", "):"";
+        return `<div class="order-item-row"><div><strong>${Number(item.quantity||1)}x ${esc(item.name||"Item")}</strong><small>${included?esc("Inclusos: "+included):""}${extras?esc((included?" • ":"")+"Extras: "+extras):""}${item.notes?esc(" • Obs.: "+item.notes):""}</small></div><b>${money(Number(item.unit_price||0)*Number(item.quantity||1))}</b></div>`;
+      }).join("");
+      return `<article class="order-card status-${esc(order.status)}">
+        <div class="order-card-head">
+          <div><span class="order-number">${esc(order.order_number)}</span><small>${formatDate(order.created_at)}</small></div>
+          <select class="order-status-select" data-order-status="${esc(order.id)}">${options}</select>
+        </div>
+        <div class="order-customer">
+          <div><strong>${esc(order.customer_name)}</strong><span>${esc(order.customer_phone)}</span></div>
+          <a href="${phoneHref(order.customer_phone)}" target="_blank" rel="noreferrer">WhatsApp</a>
+        </div>
+        <div class="order-items">${itemHtml}</div>
+        <div class="order-meta">
+          <div><span>Recebimento</span><strong>${order.delivery_mode==="pickup"?"Retirada":"Entrega"}</strong></div>
+          <div><span>Endereço</span><strong>${esc(address||"-")}</strong></div>
+          <div><span>Pagamento</span><strong>${payment}${order.change_for?esc(" • Troco: R$ "+order.change_for):""}</strong></div>
+          ${order.reference?`<div><span>Referência</span><strong>${esc(order.reference)}</strong></div>`:""}
+          ${order.notes?`<div><span>Observação</span><strong>${esc(order.notes)}</strong></div>`:""}
+        </div>
+        <div class="order-totals"><span>Subtotal ${money(order.subtotal)} • Entrega ${money(order.delivery_fee)}</span><strong>${money(order.total)}</strong></div>
+      </article>`;
+    }).join("");
+
+    document.querySelectorAll("[data-order-status]").forEach(select=>select.addEventListener("change",()=>updateOrderStatus(select.dataset.orderStatus,select.value)));
+  }
+
+  async function updateOrderStatus(id,status){
+    const now=new Date().toISOString();
+    const {error}=await db.from("orders").update({status,updated_at:now,status_updated_at:now}).eq("id",id);
+    if(error){ toast("Não foi possível alterar o status."); await loadOrders(true); return; }
+    toast("Status atualizado para "+orderStatus[status]+".");
+    await loadOrders(true);
   }
 
   function renderProducts(){
@@ -163,5 +276,13 @@
     store=data; toast("Dados da loja salvos.");
   });
 
+  $("refreshOrdersBtn").addEventListener("click",()=>loadOrders(false));
+  document.querySelectorAll("[data-order-filter]").forEach(btn=>btn.addEventListener("click",()=>{
+    orderFilter=btn.dataset.orderFilter;
+    document.querySelectorAll("[data-order-filter]").forEach(x=>x.classList.toggle("active",x===btn));
+    renderOrders();
+  }));
+
   boot();
+  setInterval(()=>{ if(!dashboard.hidden) loadOrders(true); },15000);
 })();
