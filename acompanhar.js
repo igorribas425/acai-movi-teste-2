@@ -76,12 +76,28 @@
     render(data[0]);
   }
 
+  async function confirmDelivery(){
+    if(!current || current.status !== "out_for_delivery") return;
+    const btn = $("confirmDeliveryBtn");
+    btn.disabled = true;
+    btn.textContent = "Confirmando...";
+    const {data,error} = await client.rpc("confirm_order_delivery",{p_token:token});
+    if(error || !Array.isArray(data) || !data.length){
+      btn.disabled = false;
+      btn.textContent = "Confirmar recebimento";
+      return;
+    }
+    await load();
+    btn.textContent = "Recebimento confirmado";
+  }
+
   async function init(){
     if(!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase || !token){
       showError();
       return;
     }
     client = window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+    $("confirmDeliveryBtn").addEventListener("click",confirmDelivery);
     await load();
     setInterval(load,12000);
   }
