@@ -1,6 +1,6 @@
 (() => {
   const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const STORAGE_KEY = "acai-movi-cart-v3";
+  const STORAGE_KEY = "acai-movi-cart-v4";
   const whatsappUrl = "https://wa.me/message/KONPQZAX7CH2L1";
 
   const defaults = {
@@ -38,6 +38,11 @@
       ["Aeroporto",13],["Água Branca",14],["Água Branca M",15],["Alto da Julio",12],["Alvorada",10],["Bom Pastor",13],["Cango",10],["Cantelmo",14],["Centro",10],["Centro M",30],["Cristo Rei",10],["Guanabara",11],["Industrial",12],["Ipiranga M",30],["Jardim Floresta",14],["Jardim Itália",12],["Primavera",14],["Seminário",13],["Virgínia",12],["Júpiter",14],["Kennedy",10],["Marmeleiro",30],["Marrecas",12],["Miniguaçu",14],["Monte Rey",12],["Nortão",20],["Nossa Senhora",10],["Nova Petrópolis",12],["Novo Horizonte",12],["Novo Mundo",12],["Padre Ulrico",14],["Passarela M",30],["Pedra Branca M",18],["Pinheirão",15],["Pinheirinho",14],["Raffer",13],["Sadia",15],["Santa Bárbara",20],["São Cristóvão",12],["São Francisco",11],["São Marcos",18],["São Miguel",12],["Terra Nossa",15],["Vila Nova",12]
     ].map(([name, fee], index) => ({ id: `zone-${index+1}`, name, fee, active: true }))
   };
+
+  try {
+    localStorage.removeItem("acai-movi-cart-v3");
+    localStorage.removeItem("acai-movi-last-order");
+  } catch {}
 
   let catalog = structuredClone(defaults);
   let cart = loadCart();
