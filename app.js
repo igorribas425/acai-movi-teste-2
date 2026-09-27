@@ -57,6 +57,105 @@
   function slugLabel(cat) { return cat === "marmita" ? "Marmita" : "Açaí"; }
   function showToast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove("show"), 2600); }
 
+  function normalizePlace(value = "") {
+    return String(value)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function setLocationStatus(text, type = "") {
+    const el = $("locationStatus");
+    el.hidden = false;
+    el.className = "location-status" + (type ? " " + type : "");
+    el.innerHTML = text;
+  }
+
+  function matchDeliveryZone(address = {}) {
+    const rawDistrict = address.suburb || address.neighbourhood || address.city_district || address.quarter || address.hamlet || address.village || "";
+    const district = normalizePlace(rawDistrict);
+    const municipality = normalizePlace(address.city || address.town || address.municipality || address.county || "");
+    const active = catalog.neighborhoods.filter(z => z.active !== false);
+
+    if (municipality.includes("marmeleiro")) {
+      const marmeleiroPreferred = active.find(z => {
+        const zn = normalizePlace(z.name);
+        return district && (zn === district + " m" || zn.replace(/ m$/, "") === district && / m$/.test(zn));
+      });
+      if (marmeleiroPreferred) return { zone: marmeleiroPreferred, detected: rawDistrict || "Marmeleiro" };
+      const marmeleiroZone = active.find(z => normalizePlace(z.name) === "marmeleiro");
+      if (marmeleiroZone) return { zone: marmeleiroZone, detected: rawDistrict || "Marmeleiro" };
+    }
+
+    const exact = active.find(z => normalizePlace(z.name) === district);
+    if (exact) return { zone: exact, detected: rawDistrict };
+
+    const close = active.find(z => {
+      const zn = normalizePlace(z.name).replace(/ m$/, "");
+      return district && (district.includes(zn) || zn.includes(district));
+    });
+    if (close) return { zone: close, detected: rawDistrict };
+
+    return { zone: null, detected: rawDistrict };
+  }
+
+  async function reverseGeocode(latitude, longitude) {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("zoom", "18");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("accept-language", "pt-BR");
+    const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+    if (!response.ok) throw new Error("Falha ao identificar o bairro.");
+    return response.json();
+  }
+
+  async function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("Este aparelho não oferece localização pelo navegador. Selecione o bairro manualmente.", "warn");
+      return;
+    }
+    const btn = $("useLocationBtn");
+    btn.classList.add("loading");
+    btn.querySelector("strong").textContent = "Localizando...";
+    setLocationStatus("Aguardando a permissão de localização do aparelho.");
+
+    navigator.geolocation.getCurrentPosition(async position => {
+      try {
+        const data = await reverseGeocode(position.coords.latitude, position.coords.longitude);
+        const address = data.address || {};
+        const { zone, detected } = matchDeliveryZone(address);
+        if (!zone) {
+          setLocationStatus(`Local encontrado${detected ? `: <strong>${escapeHtml(detected)}</strong>` : ""}, mas não consegui relacionar com segurança a uma taxa. Escolha o bairro manualmente. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>`, "warn");
+          return;
+        }
+        $("neighborhoodSelect").value = zone.id;
+        renderSummary();
+        const place = detected || zone.name;
+        setLocationStatus(`Bairro identificado: <strong>${escapeHtml(place)}</strong>. Taxa aplicada: <strong>${money(zone.fee)}</strong>. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>`, "ok");
+        showToast(`Taxa de ${money(zone.fee)} aplicada para ${zone.name}.`);
+      } catch (error) {
+        console.warn(error);
+        setLocationStatus("Não consegui identificar o bairro agora. Você pode selecionar manualmente sem problema.", "warn");
+      } finally {
+        btn.classList.remove("loading");
+        btn.querySelector("strong").textContent = "Usar minha localização";
+      }
+    }, error => {
+      const messages = {
+        1: "A permissão de localização foi negada. Selecione o bairro manualmente.",
+        2: "Não foi possível obter sua localização. Selecione o bairro manualmente.",
+        3: "A localização demorou demais. Tente novamente ou selecione o bairro manualmente."
+      };
+      setLocationStatus(messages[error.code] || "Não foi possível usar sua localização. Selecione o bairro manualmente.", "warn");
+      btn.classList.remove("loading");
+      btn.querySelector("strong").textContent = "Usar minha localização";
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 });
+  }
+
   function loadCart() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
   }
@@ -296,6 +395,7 @@
     qsa("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{deliveryMode=btn.dataset.mode;qsa("[data-mode]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
     qsa("[data-payment]").forEach(btn=>btn.addEventListener("click",()=>{payment=btn.dataset.payment;qsa("[data-payment]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
     $("neighborhoodSelect").addEventListener("change",renderSummary);
+    $("useLocationBtn").addEventListener("click",useCurrentLocation);
     $("finishOrderBtn").addEventListener("click",finishOrder);
     document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("productOverlay").hidden)closeProduct();else if(!$("cartOverlay").hidden)closeCart();}});
   }
