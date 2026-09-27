@@ -128,6 +128,31 @@
     $("ordersSummary").innerHTML=cards.map(([label,value,sub])=>`<article class="order-kpi"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></article>`).join("");
   }
 
+  function paymentStatusInfo(order){
+    if(order.payment_status==="paid") return ["Pago","paid"];
+    if(order.payment_status==="pay_on_delivery") return ["Pagar na entrega","delivery"];
+    if(order.payment_status==="cancelled") return ["Cancelado","cancelled"];
+    if(order.payment_status==="refunded") return ["Estornado","refunded"];
+    return order.payment==="pix" ? ["Aguardando PIX","pending"] : ["Aguardando pagamento","pending"];
+  }
+
+  function orderActionHtml(order){
+    if(order.status==="cancelled" || order.status==="delivered") return "";
+    if(order.payment==="pix" && order.payment_status!=="paid"){
+      return '<button class="order-primary-action" data-confirm-pix="'+esc(order.id)+'">Confirmar PIX e preparar</button>';
+    }
+    if(order.status==="new" || order.status==="confirmed"){
+      return '<button class="order-primary-action" data-start-preparing="'+esc(order.id)+'">Aceitar e preparar</button>';
+    }
+    if(order.status==="preparing" && order.delivery_mode==="delivery"){
+      return '<button class="order-primary-action delivery-action" data-out-delivery="'+esc(order.id)+'">Saiu para entrega</button>';
+    }
+    if(order.status==="out_for_delivery"){
+      return '<div class="waiting-customer">📲 Aguardando o cliente confirmar o recebimento</div>';
+    }
+    return "";
+  }
+
   function renderOrders(){
     renderOrderSummary();
     const list=filteredOrders();
@@ -142,41 +167,109 @@
         ? "Retirada no local"
         : [order.street,order.street_number,order.address_complement,order.neighborhood].filter(Boolean).join(", ");
       const payment=order.payment==="pix"?"PIX":order.payment==="card"?"Cartão":"Dinheiro";
-      const options=Object.entries(orderStatus).map(([value,label])=>`<option value="${value}" ${order.status===value?"selected":""}>${label}</option>`).join("");
+      const payInfo=paymentStatusInfo(order);
+      const lockStatus=order.payment==="pix" && order.payment_status!=="paid" && order.status==="new";
+      const options=Object.entries(orderStatus).map(([value,label])=>'<option value="'+value+'" '+(order.status===value?"selected":"")+'>'+label+'</option>').join("");
       const itemHtml=items.map(item=>{
         const included=Array.isArray(item.included)?item.included.join(", "):"";
         const extras=Array.isArray(item.extras)?item.extras.map(x=>x?.name||x).filter(Boolean).join(", "):"";
-        return `<div class="order-item-row"><div><strong>${Number(item.quantity||1)}x ${esc(item.name||"Item")}</strong><small>${included?esc("Inclusos: "+included):""}${extras?esc((included?" • ":"")+"Extras: "+extras):""}${item.notes?esc(" • Obs.: "+item.notes):""}</small></div><b>${money(Number(item.unit_price||0)*Number(item.quantity||1))}</b></div>`;
+        return '<div class="order-item-row"><div><strong>'+Number(item.quantity||1)+'x '+esc(item.name||"Item")+'</strong><small>'+(included?esc("Inclusos: "+included):"")+(extras?esc((included?" • ":"")+"Extras: "+extras):"")+(item.notes?esc(" • Obs.: "+item.notes):"")+'</small></div><b>'+money(Number(item.unit_price||0)*Number(item.quantity||1))+'</b></div>';
       }).join("");
-      return `<article class="order-card status-${esc(order.status)}">
-        <div class="order-card-head">
-          <div><span class="order-number">${esc(order.order_number)}</span><small>${formatDate(order.created_at)}</small></div>
-          <select class="order-status-select" data-order-status="${esc(order.id)}">${options}</select>
-        </div>
-        <div class="order-customer">
-          <div><strong>${esc(order.customer_name)}</strong><span>${esc(order.customer_phone)}</span></div>
-          <a href="${phoneHref(order.customer_phone)}" target="_blank" rel="noreferrer">WhatsApp</a>
-        </div>
-        <div class="order-items">${itemHtml}</div>
-        <div class="order-meta">
-          <div><span>Recebimento</span><strong>${order.delivery_mode==="pickup"?"Retirada":"Entrega"}</strong></div>
-          <div><span>Endereço</span><strong>${esc(address||"-")}</strong></div>
-          <div><span>Pagamento</span><strong>${payment}${order.change_for?esc(" • Troco: R$ "+order.change_for):""}</strong></div>
-          ${order.reference?`<div><span>Referência</span><strong>${esc(order.reference)}</strong></div>`:""}
-          ${order.notes?`<div><span>Observação</span><strong>${esc(order.notes)}</strong></div>`:""}
-        </div>
-        <div class="order-totals"><span>Subtotal ${money(order.subtotal)} • Entrega ${money(order.delivery_fee)}</span><strong>${money(order.total)}</strong></div>
-      </article>`;
+      return '<article class="order-card status-'+esc(order.status)+'">'+
+        '<div class="order-card-head">'+
+          '<div><span class="order-number">'+esc(order.order_number)+'</span><small>'+formatDate(order.created_at)+'</small></div>'+
+          '<select class="order-status-select" data-order-status="'+esc(order.id)+'" '+(lockStatus?"disabled":"")+'>'+options+'</select>'+
+        '</div>'+
+        '<div class="order-customer">'+
+          '<div><strong>'+esc(order.customer_name)+'</strong><span>'+esc(order.customer_phone)+'</span></div>'+
+          '<a href="'+phoneHref(order.customer_phone)+'" target="_blank" rel="noreferrer">WhatsApp</a>'+
+        '</div>'+
+        '<div class="payment-banner '+payInfo[1]+'"><div><span>Pagamento</span><strong>'+payment+'</strong></div><b>'+payInfo[0]+'</b></div>'+
+        '<div class="order-items">'+itemHtml+'</div>'+
+        '<div class="order-meta">'+
+          '<div><span>Recebimento</span><strong>'+(order.delivery_mode==="pickup"?"Retirada":"Entrega")+'</strong></div>'+
+          '<div><span>Endereço</span><strong>'+esc(address||"-")+'</strong></div>'+
+          '<div><span>Pagamento</span><strong>'+payment+(order.change_for?esc(" • Troco: R$ "+order.change_for):"")+'</strong></div>'+
+          (order.reference?'<div><span>Referência</span><strong>'+esc(order.reference)+'</strong></div>':"")+
+          (order.notes?'<div><span>Observação</span><strong>'+esc(order.notes)+'</strong></div>':"")+
+        '</div>'+
+        '<div class="order-totals"><span>Subtotal '+money(order.subtotal)+' • Entrega '+money(order.delivery_fee)+'</span><strong>'+money(order.total)+'</strong></div>'+
+        '<div class="order-actions">'+orderActionHtml(order)+'</div>'+
+      '</article>';
     }).join("");
 
     document.querySelectorAll("[data-order-status]").forEach(select=>select.addEventListener("change",()=>updateOrderStatus(select.dataset.orderStatus,select.value)));
+    document.querySelectorAll("[data-confirm-pix]").forEach(btn=>btn.addEventListener("click",()=>confirmPixAndPrepare(btn.dataset.confirmPix)));
+    document.querySelectorAll("[data-start-preparing]").forEach(btn=>btn.addEventListener("click",()=>startPreparing(btn.dataset.startPreparing)));
+    document.querySelectorAll("[data-out-delivery]").forEach(btn=>btn.addEventListener("click",()=>markOutForDelivery(btn.dataset.outDelivery)));
   }
 
   async function updateOrderStatus(id,status){
+    const order=orders.find(o=>o.id===id);
+    if(!order) return;
+    if(order.payment==="pix" && order.payment_status!=="paid" && ["confirmed","preparing","out_for_delivery","delivered"].includes(status)){
+      toast("Confirme o PIX antes de avançar o pedido.");
+      renderOrders();
+      return;
+    }
     const now=new Date().toISOString();
-    const {error}=await db.from("orders").update({status,updated_at:now,status_updated_at:now}).eq("id",id);
+    const patch={status,updated_at:now,status_updated_at:now};
+    if(status==="confirmed" && !order.confirmed_at) patch.confirmed_at=now;
+    if(status==="preparing"){
+      if(!order.confirmed_at) patch.confirmed_at=now;
+      if(!order.preparing_at) patch.preparing_at=now;
+    }
+    if(status==="out_for_delivery" && !order.out_for_delivery_at) patch.out_for_delivery_at=now;
+    if(status==="delivered"){
+      patch.delivered_at=now;
+      if(order.payment==="card" || order.payment==="cash") patch.payment_status="paid";
+    }
+    if(status==="cancelled" && order.payment_status!=="paid") patch.payment_status="cancelled";
+    const {error}=await db.from("orders").update(patch).eq("id",id);
     if(error){ toast("Não foi possível alterar o status."); await loadOrders(true); return; }
     toast("Status atualizado para "+orderStatus[status]+".");
+    await loadOrders(true);
+  }
+
+  async function confirmPixAndPrepare(id){
+    const now=new Date().toISOString();
+    const {error}=await db.from("orders").update({
+      payment_status:"paid",
+      status:"preparing",
+      confirmed_at:now,
+      preparing_at:now,
+      updated_at:now,
+      status_updated_at:now
+    }).eq("id",id);
+    if(error){toast("Não foi possível confirmar o PIX.");return;}
+    toast("PIX confirmado. Pedido em preparo.");
+    await loadOrders(true);
+  }
+
+  async function startPreparing(id){
+    const now=new Date().toISOString();
+    const {error}=await db.from("orders").update({
+      status:"preparing",
+      confirmed_at:now,
+      preparing_at:now,
+      updated_at:now,
+      status_updated_at:now
+    }).eq("id",id);
+    if(error){toast("Não foi possível iniciar o preparo.");return;}
+    toast("Pedido enviado para preparo.");
+    await loadOrders(true);
+  }
+
+  async function markOutForDelivery(id){
+    const now=new Date().toISOString();
+    const {error}=await db.from("orders").update({
+      status:"out_for_delivery",
+      out_for_delivery_at:now,
+      updated_at:now,
+      status_updated_at:now
+    }).eq("id",id);
+    if(error){toast("Não foi possível marcar a saída.");return;}
+    toast("Pedido saiu para entrega. O cliente já pode confirmar o recebimento.");
     await loadOrders(true);
   }
 
