@@ -4,8 +4,21 @@ const base = process.env.TEST_URL || "http://127.0.0.1:4173";
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 900 },
-  permissions: ["clipboard-read", "clipboard-write"]
+  permissions: ["clipboard-read", "clipboard-write", "geolocation"],
+  geolocation: { latitude: -26.0810, longitude: -53.0550 }
 });
+await context.route("https://nominatim.openstreetmap.org/**", route => route.fulfill({
+  status: 200,
+  contentType: "application/json",
+  body: JSON.stringify({
+    address: {
+      suburb: "Centro",
+      city: "Francisco Beltrão",
+      state: "Paraná",
+      country: "Brasil"
+    }
+  })
+}));
 const page = await context.newPage();
 const failures = [];
 
@@ -38,7 +51,10 @@ try {
 
   await page.locator("#customerName").fill("Cliente Teste");
   await page.locator("#customerPhone").fill("(46) 99999-9999");
-  await page.locator("#neighborhoodSelect").selectOption("centro");
+  await page.locator("#useLocationBtn").click();
+  await page.waitForFunction(() => document.querySelector("#neighborhoodSelect")?.value === "centro");
+  ok((await page.locator("#neighborhoodSelect").inputValue()) === "centro", "GPS identifica Centro automaticamente");
+  ok((await page.locator("#locationStatus").innerText()).includes("R$"), "GPS mostra a taxa aplicada");
   await page.locator("#streetInput").fill("Rua Teste");
   await page.locator("#numberInput").fill("123");
   ok((await page.locator("#checkoutTotal").innerText()).includes("31,00"), "Taxa do Centro soma R$ 10");
