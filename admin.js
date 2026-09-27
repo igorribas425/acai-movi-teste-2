@@ -24,8 +24,29 @@
     $("loginError").textContent="";
     const {data,error}=await db.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});
     if(error){$("loginError").textContent="E-mail ou senha inválidos.";return;}
-    if(!(await isAdmin(data.user.id))){await db.auth.signOut();$("loginError").textContent="Este usuário não tem permissão de administrador.";return;}
+    if(!(await isAdmin(data.user.id))){await db.auth.signOut();$("loginError").textContent="Este usuário ainda não está autorizado. Confirme o e-mail do primeiro acesso e tente novamente.";return;}
     loginScreen.hidden=true; await loadAll(); dashboard.hidden=false;
+  });
+
+  $("firstAccessBtn").addEventListener("click", async () => {
+    $("loginError").textContent="";
+    $("firstAccessHelp").hidden=false;
+    const email=$("loginEmail").value.trim();
+    const password=$("loginPassword").value;
+    if(!email || !password){$("loginError").textContent="Preencha e-mail e senha antes de criar o primeiro acesso.";return;}
+    if(password.length < 8){$("loginError").textContent="A senha precisa ter pelo menos 8 caracteres.";return;}
+    $("firstAccessBtn").disabled=true;
+    $("firstAccessBtn").textContent="Enviando confirmação...";
+    const {data,error}=await db.auth.signUp({email,password});
+    await db.auth.signOut();
+    $("firstAccessBtn").disabled=false;
+    $("firstAccessBtn").textContent="Primeiro acesso";
+    if(error){$("loginError").textContent="Não foi possível iniciar o primeiro acesso. Se a conta já existir, use Entrar no painel.";return;}
+    if(data?.session){
+      $("loginError").textContent="Por segurança, o acesso administrativo só é liberado após confirmação real do e-mail. Verifique a caixa de entrada e tente novamente.";
+      return;
+    }
+    $("loginError").textContent="Enviamos a confirmação. Abra seu e-mail, confirme o cadastro e depois volte aqui para entrar.";
   });
   $("logoutBtn").addEventListener("click",async()=>{await db.auth.signOut();location.reload();});
 
