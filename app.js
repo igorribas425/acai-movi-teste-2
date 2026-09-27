@@ -48,6 +48,10 @@
   let quantity = 1;
   let deliveryMode = "delivery";
   let payment = "pix";
+  let supabaseClient = null;
+  let submittingOrder = false;
+  let lastOrderFingerprint = "";
+  let lastOrderNumber = "";
 
   const $ = (id) => document.getElementById(id);
   const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -165,7 +169,8 @@
     const cfg = window.ACAI_MOVI_CONFIG || {};
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) return;
     try {
-      const client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+      supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+      const client = supabaseClient;
       const [products, complements, zones, settings] = await Promise.all([
         client.from("products").select("*").order("sort_order"),
         client.from("complements").select("*").order("sort_order"),
@@ -343,11 +348,80 @@
     return "";
   }
 
-  function buildOrderMessage() {
-    const id = `MV-${String(Date.now()).slice(-6)}`;
+  function generateOrderNumber() {
+    const date = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit"
+    }).format(new Date()).replace(/\D/g, "");
+    const random = globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID().slice(0, 6).toUpperCase()
+      : Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `MV-${date}-${random}`;
+  }
+
+  function orderItemsForStorage() {
+    return cart.map(item => ({
+      product_id: item.product_id,
+      name: item.name,
+      quantity: Number(item.quantity),
+      base_price: Number(item.base_price),
+      unit_price: Number(item.unit_price),
+      included: item.free.map(id => catalog.complements.find(c => c.id === id)?.name).filter(Boolean),
+      extras: item.premium.map(id => {
+        const extra = catalog.complements.find(c => c.id === id);
+        return extra ? { id: extra.id, name: extra.name, price: Number(extra.price) } : null;
+      }).filter(Boolean),
+      notes: item.notes || ""
+    }));
+  }
+
+  function buildOrderPayload(orderNumber) {
+    const zone = selectedZone();
+    return {
+      order_number: orderNumber,
+      customer_name: $("customerName").value.trim(),
+      customer_phone: $("customerPhone").value.trim(),
+      delivery_mode: deliveryMode,
+      neighborhood: deliveryMode === "delivery" ? (zone?.name || null) : null,
+      street: deliveryMode === "delivery" ? $("streetInput").value.trim() : null,
+      street_number: deliveryMode === "delivery" ? $("numberInput").value.trim() : null,
+      address_complement: deliveryMode === "delivery" ? ($("addressComplement").value.trim() || null) : null,
+      reference: deliveryMode === "delivery" ? ($("referenceInput").value.trim() || null) : null,
+      payment,
+      change_for: payment === "cash" ? ($("changeInput").value.trim() || null) : null,
+      items: orderItemsForStorage(),
+      subtotal: Number(cartSubtotal().toFixed(2)),
+      delivery_fee: Number(deliveryFee().toFixed(2)),
+      total: Number(grandTotal().toFixed(2)),
+      notes: $("orderNotes").value.trim() || null,
+      status: "new",
+      source: "site"
+    };
+  }
+
+  function currentOrderFingerprint() {
+    const payload = buildOrderPayload("");
+    delete payload.order_number;
+    return JSON.stringify(payload);
+  }
+
+  async function saveOrderRecord(orderNumber) {
+    if (!supabaseClient) return { ok: false, error: new Error("Banco de pedidos indisponível.") };
+    const payload = buildOrderPayload(orderNumber);
+    const { error } = await supabaseClient.from("orders").insert(payload);
+    if (error) {
+      console.error("Falha ao registrar pedido:", error);
+      return { ok: false, error };
+    }
+    return { ok: true, payload };
+  }
+
+  function buildOrderMessage(orderNumber) {
     const lines = [
       `🍧 *NOVO PEDIDO — AÇAÍ MOVÍ*`,
-      `Pedido: *${id}*`,
+      `Pedido: *${orderNumber}*`,
       ``,
       ...cart.flatMap((item,index)=>{
         const free = item.free.map(id=>catalog.complements.find(c=>c.id===id)?.name).filter(Boolean);
@@ -377,11 +451,46 @@
   }
 
   async function finishOrder() {
-    const error = validateCheckout(); if (error) { showToast(error); return; }
-    const message = buildOrderMessage();
-    try { await navigator.clipboard.writeText(message); showToast("Pedido copiado. Abrindo WhatsApp..."); } catch { showToast("Abrindo WhatsApp..."); }
-    const target = catalog.store.whatsapp_url || whatsappUrl;
-    setTimeout(()=>window.open(target,"_blank","noopener,noreferrer"),180);
+    if (submittingOrder) return;
+    const validationError = validateCheckout();
+    if (validationError) { showToast(validationError); return; }
+
+    submittingOrder = true;
+    const button = $("finishOrderBtn");
+    button.disabled = true;
+
+    try {
+      const fingerprint = currentOrderFingerprint();
+      let orderNumber = lastOrderNumber;
+
+      if (!orderNumber || fingerprint !== lastOrderFingerprint) {
+        orderNumber = generateOrderNumber();
+        showToast("Registrando seu pedido...");
+        const saved = await saveOrderRecord(orderNumber);
+        if (!saved.ok) {
+          showToast("Não consegui registrar o pedido. Tente novamente em alguns segundos.");
+          return;
+        }
+        lastOrderFingerprint = fingerprint;
+        lastOrderNumber = orderNumber;
+      }
+
+      const message = buildOrderMessage(orderNumber);
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast(`Pedido ${orderNumber} registrado. Abrindo WhatsApp...`);
+      } catch {
+        showToast(`Pedido ${orderNumber} registrado. Abrindo WhatsApp...`);
+      }
+
+      const target = catalog.store.whatsapp_url || whatsappUrl;
+      setTimeout(() => window.open(target, "_blank", "noopener,noreferrer"), 180);
+    } finally {
+      setTimeout(() => {
+        submittingOrder = false;
+        button.disabled = false;
+      }, 1200);
+    }
   }
 
   function bindEvents() {
