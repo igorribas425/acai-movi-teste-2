@@ -77,6 +77,16 @@
     el.innerHTML = text;
   }
 
+  function applyDetectedAddress(address = {}) {
+    const street = address.road || address.pedestrian || address.residential || address.footway || address.path || address.cycleway || "";
+    const number = address.house_number || "";
+
+    if (street) $("streetInput").value = street;
+    if (number) $("numberInput").value = number;
+
+    return { street, number };
+  }
+
   function matchDeliveryZone(address = {}) {
     const rawDistrict = address.suburb || address.neighbourhood || address.city_district || address.quarter || address.hamlet || address.village || "";
     const district = normalizePlace(rawDistrict);
@@ -138,10 +148,24 @@
           return;
         }
         $("neighborhoodSelect").value = zone.id;
+        const detectedAddress = applyDetectedAddress(address);
         renderSummary();
         const place = detected || zone.name;
-        setLocationStatus(`Bairro identificado: <strong>${escapeHtml(place)}</strong>. Taxa aplicada: <strong>${money(zone.fee)}</strong>. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>`, "ok");
-        showToast(`Taxa de ${money(zone.fee)} aplicada para ${zone.name}.`);
+        const addressDetails = detectedAddress.street
+          ? ` Endereço: <strong>${escapeHtml(detectedAddress.street)}${detectedAddress.number ? `, ${escapeHtml(detectedAddress.number)}` : ""}</strong>.`
+          : "";
+        const confirmation = detectedAddress.street && !detectedAddress.number
+          ? " Confira a rua e informe o número antes de finalizar."
+          : " Confira o endereço antes de finalizar.";
+        setLocationStatus(`Bairro identificado: <strong>${escapeHtml(place)}</strong>.${addressDetails} Taxa aplicada: <strong>${money(zone.fee)}</strong>.${confirmation} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>`, "ok");
+        if (detectedAddress.street && detectedAddress.number) {
+          showToast(`Endereço preenchido e taxa de ${money(zone.fee)} aplicada.`);
+        } else if (detectedAddress.street) {
+          showToast("Rua preenchida. Confira e informe o número.");
+          $("numberInput").focus();
+        } else {
+          showToast(`Bairro identificado. Taxa de ${money(zone.fee)} aplicada.`);
+        }
       } catch (error) {
         console.warn(error);
         setLocationStatus("Não consegui identificar o bairro agora. Você pode selecionar manualmente sem problema.", "warn");
