@@ -38,7 +38,7 @@ try {
 
   await page.locator("#customerName").fill("Cliente Teste");
   await page.locator("#customerPhone").fill("(46) 99999-9999");
-  await page.locator("#neighborhoodSelect").selectOption({ label: /Centro —/ });
+  await page.locator("#neighborhoodSelect").selectOption("centro");
   await page.locator("#streetInput").fill("Rua Teste");
   await page.locator("#numberInput").fill("123");
   ok((await page.locator("#checkoutTotal").innerText()).includes("31,00"), "Taxa do Centro soma R$ 10");
