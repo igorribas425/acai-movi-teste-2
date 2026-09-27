@@ -52,6 +52,7 @@
   let submittingOrder = false;
   let lastOrderFingerprint = "";
   let lastOrderNumber = "";
+  let lastTrackingToken = "";
 
   const $ = (id) => document.getElementById(id);
   const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -377,10 +378,11 @@
     }));
   }
 
-  function buildOrderPayload(orderNumber) {
+  function buildOrderPayload(orderNumber, trackingToken = "") {
     const zone = selectedZone();
     return {
       order_number: orderNumber,
+      ...(trackingToken ? { tracking_token: trackingToken } : {}),
       customer_name: $("customerName").value.trim(),
       customer_phone: $("customerPhone").value.trim(),
       delivery_mode: deliveryMode,
@@ -404,12 +406,13 @@
   function currentOrderFingerprint() {
     const payload = buildOrderPayload("");
     delete payload.order_number;
+    delete payload.tracking_token;
     return JSON.stringify(payload);
   }
 
-  async function saveOrderRecord(orderNumber) {
+  async function saveOrderRecord(orderNumber, trackingToken) {
     if (!supabaseClient) return { ok: false, error: new Error("Banco de pedidos indisponível.") };
-    const payload = buildOrderPayload(orderNumber);
+    const payload = buildOrderPayload(orderNumber, trackingToken);
     const { error } = await supabaseClient.from("orders").insert(payload);
     if (error) {
       console.error("Falha ao registrar pedido:", error);
@@ -418,7 +421,10 @@
     return { ok: true, payload };
   }
 
-  function buildOrderMessage(orderNumber) {
+  function buildOrderMessage(orderNumber, trackingToken) {
+    const trackingUrl = new URL("acompanhar-pedido.html", window.location.href);
+    trackingUrl.searchParams.set("token", trackingToken);
+    const paymentLabel = payment === "pix" ? "PIX — aguardando confirmação" : payment === "card" ? "Cartão — pagamento na entrega" : "Dinheiro — pagamento na entrega";
     const lines = [
       `🍧 *NOVO PEDIDO — AÇAÍ MOVÍ*`,
       `Pedido: *${orderNumber}*`,
@@ -439,13 +445,15 @@
       deliveryMode === "pickup" ? `🏪 *Retirada no local*` : `📍 *Entrega:* ${selectedZone().name} — ${money(selectedZone().fee)}`,
       deliveryMode === "delivery" ? `🏠 *Endereço:* ${$("streetInput").value.trim()}, ${$("numberInput").value.trim()}${$("addressComplement").value.trim()?` — ${$("addressComplement").value.trim()}`:""}` : null,
       deliveryMode === "delivery" && $("referenceInput").value.trim() ? `🧭 *Referência:* ${$("referenceInput").value.trim()}` : null,
-      `💳 *Pagamento:* ${payment === "pix" ? "PIX" : payment === "card" ? "Cartão" : "Dinheiro"}`,
+      `💳 *Pagamento:* ${paymentLabel}`,
       payment === "cash" && $("changeInput").value.trim() ? `💵 *Troco para:* R$ ${$("changeInput").value.trim()}` : null,
       $("orderNotes").value.trim() ? `📝 *Observação:* ${$("orderNotes").value.trim()}` : null,
       ``,
       `Subtotal: ${money(cartSubtotal())}`,
       deliveryMode === "delivery" ? `Entrega: ${money(deliveryFee())}` : `Retirada: Grátis`,
-      `*TOTAL: ${money(grandTotal())}*`
+      `*TOTAL: ${money(grandTotal())}*`,
+      ``,
+      `📲 *Acompanhar pedido:* ${trackingUrl.href}`
     ].filter(v=>v!==null);
     return lines.join("\n");
   }
@@ -462,20 +470,26 @@
     try {
       const fingerprint = currentOrderFingerprint();
       let orderNumber = lastOrderNumber;
+      let trackingToken = lastTrackingToken;
 
-      if (!orderNumber || fingerprint !== lastOrderFingerprint) {
+      if (!orderNumber || !trackingToken || fingerprint !== lastOrderFingerprint) {
         orderNumber = generateOrderNumber();
+        trackingToken = globalThis.crypto?.randomUUID
+          ? globalThis.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         showToast("Registrando seu pedido...");
-        const saved = await saveOrderRecord(orderNumber);
+        const saved = await saveOrderRecord(orderNumber, trackingToken);
         if (!saved.ok) {
           showToast("Não consegui registrar o pedido. Tente novamente em alguns segundos.");
           return;
         }
         lastOrderFingerprint = fingerprint;
         lastOrderNumber = orderNumber;
+        lastTrackingToken = trackingToken;
+        localStorage.setItem("acai-movi-last-order", JSON.stringify({ orderNumber, trackingToken }));
       }
 
-      const message = buildOrderMessage(orderNumber);
+      const message = buildOrderMessage(orderNumber, trackingToken);
       try {
         await navigator.clipboard.writeText(message);
         showToast(`Pedido ${orderNumber} registrado. Abrindo WhatsApp...`);
