@@ -557,9 +557,9 @@
       const message = buildOrderMessage(orderNumber, trackingToken);
       try {
         await navigator.clipboard.writeText(message);
-        showToast(`Pedido ${orderNumber} registrado. Abrindo WhatsApp...`);
+        showToast(`Pedido ${orderNumber} entrou no sistema. Abrindo WhatsApp...`);
       } catch {
-        showToast(`Pedido ${orderNumber} registrado. Abrindo WhatsApp...`);
+        showToast(`Pedido ${orderNumber} entrou no sistema. Abrindo WhatsApp...`);
       }
 
       const target = catalog.store.whatsapp_url || whatsappUrl;
