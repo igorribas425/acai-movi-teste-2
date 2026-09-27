@@ -89,10 +89,13 @@
     return orders.filter(o=>o.status===orderFilter);
   }
 
-  function phoneHref(phone=""){
+  function phoneHref(phone="", orderNumber="", customerName=""){
     let digits=String(phone).replace(/\D/g,"");
     if(digits.length===10||digits.length===11) digits="55"+digits;
-    return digits ? "https://wa.me/"+digits : "#";
+    if(!digits) return "#";
+    const firstName=String(customerName||"").trim().split(/\s+/)[0] || "";
+    const message=`Olá${firstName ? " "+firstName : ""}! Aqui é do Açaí Moví sobre o pedido ${orderNumber || ""}. Podemos falar por aqui?`;
+    return "https://wa.me/"+digits+"?text="+encodeURIComponent(message);
   }
 
   function renderOrderSummary(){
@@ -162,7 +165,7 @@
         '</div>'+
         '<div class="order-customer">'+
           '<div><strong>'+esc(order.customer_name)+'</strong><span>'+esc(order.customer_phone)+'</span></div>'+
-          '<a href="'+phoneHref(order.customer_phone)+'" target="_blank" rel="noreferrer">WhatsApp</a>'+
+          '<a href="'+phoneHref(order.customer_phone,order.order_number,order.customer_name)+'" target="_blank" rel="noreferrer">Falar com cliente</a>'+
         '</div>'+
         '<div class="payment-banner '+payInfo[1]+'"><div><span>Pagamento</span><strong>'+payment+'</strong></div><b>'+payInfo[0]+'</b></div>'+
         '<div class="order-items">'+itemHtml+'</div>'+
