@@ -96,6 +96,9 @@ try {
   await page.goto(base + "/painel-movi-gestao.html", { waitUntil: "networkidle" });
   ok(await page.locator("#loginScreen").isVisible(), "Painel ADM conectado e exige login");
   ok(await page.locator("#setupScreen").isHidden(), "Painel não está em modo sem banco");
+  await page.locator("#firstAccessBtn").click();
+  ok((await page.locator("#loginError").innerText()).includes("Preencha e-mail e senha"), "Botão Primeiro acesso responde ao clique");
+  ok(await page.locator("#firstAccessHelp").isVisible(), "Ajuda do primeiro acesso aparece");
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mobile.goto(base + "/", { waitUntil: "networkidle" });
