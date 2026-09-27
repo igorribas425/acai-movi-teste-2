@@ -183,6 +183,8 @@
 
         <div class="checkout-block" id="deliveryFields">
           <h3>Endereço de entrega</h3>
+          <button class="location-btn" id="useLocationBtn" type="button"><span>📍</span><div><strong>Usar minha localização</strong><small>Identifica o bairro e calcula a taxa automaticamente</small></div></button>
+          <div class="location-status" id="locationStatus" hidden></div>
           <label><span>Bairro *</span><select id="neighborhoodSelect"><option value="">Selecione o bairro</option></select></label>
           <div class="field-grid">
             <label class="wide"><span>Rua *</span><input id="streetInput" type="text" autocomplete="street-address" placeholder="Nome da rua" /></label>
