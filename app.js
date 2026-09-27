@@ -250,8 +250,35 @@
     const hour = Number(parts.find(p => p.type === "hour")?.value || 0);
     const minute = Number(parts.find(p => p.type === "minute")?.value || 0);
     const current = hour * 60 + minute;
-    const open = current >= 13*60 && current < 22*60;
-    const el = $("storeStatus"); el.classList.toggle("closed", !open); el.querySelector("b").textContent = open ? "Aberto até 22h" : "Fechado • abre às 13h";
+
+    const parseMinutes = (value, fallback) => {
+      const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : fallback;
+    };
+    const formatHour = (value, fallback) => {
+      const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+      if (!match) return fallback;
+      return Number(match[2]) === 0 ? Number(match[1]) + "h" : match[1].padStart(2,"0") + ":" + match[2];
+    };
+
+    const opensAt = catalog.store.opens_at || "13:00";
+    const closesAt = catalog.store.closes_at || "22:00";
+    const openMinutes = parseMinutes(opensAt, 13 * 60);
+    const closeMinutes = parseMinutes(closesAt, 22 * 60);
+    const isOpen = closeMinutes > openMinutes
+      ? current >= openMinutes && current < closeMinutes
+      : current >= openMinutes || current < closeMinutes;
+
+    const openLabel = formatHour(opensAt, "13h");
+    const closeLabel = formatHour(closesAt, "22h");
+    const el = $("storeStatus");
+    el.classList.toggle("closed", !isOpen);
+    el.querySelector("b").textContent = isOpen ? "Aberto até " + closeLabel : "Fechado • abre às " + openLabel;
+
+    const heroHours = $("heroHours");
+    if (heroHours) heroHours.textContent = openLabel + " às " + closeLabel;
+    const footerHours = $("footerHours");
+    if (footerHours) footerHours.textContent = "Segunda a domingo • " + openLabel + " às " + closeLabel;
   }
 
   function openProduct(id) {
