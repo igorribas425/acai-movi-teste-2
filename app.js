@@ -1,0 +1,309 @@
+(() => {
+  const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const STORAGE_KEY = "acai-movi-cart-v3";
+  const whatsappUrl = "https://wa.me/message/KONPQZAX7CH2L1";
+
+  const defaults = {
+    store: {
+      store_name: "Açaí Moví",
+      city: "Francisco Beltrão",
+      state: "PR",
+      instagram_url: "https://www.instagram.com/acaimovi?stkn=MW56b3NqeTcxZTQ5Zw==",
+      whatsapp_url: whatsappUrl,
+      opens_at: "13:00",
+      closes_at: "22:00"
+    },
+    products: [
+      { id: "acai-300", name: "Açaí 300ml", description: "O tamanho perfeito para começar 💜", price: 18, image_url: "images/produto-300.png", free_limit: 4, category: "cups", active: true, featured: false },
+      { id: "acai-400", name: "Açaí 400ml", description: "O equilíbrio perfeito.", price: 20, image_url: "images/produto-400.png", free_limit: 4, category: "cups", active: true, featured: true },
+      { id: "acai-500", name: "Açaí 500ml", description: "Nosso campeão de pedidos.", price: 22, image_url: "images/produto-500.png", free_limit: 4, category: "cups", active: true, featured: false },
+      { id: "acai-1kg", name: "Marmita 1kg", description: "Ideal para compartilhar.", price: 45, image_url: "images/produto-1kg.jpg", free_limit: 6, category: "marmita", active: true, featured: false }
+    ],
+    complements: [
+      { id: "banana", name: "Banana", price: 0, premium: false, active: true },
+      { id: "granola", name: "Granola", price: 0, premium: false, active: true },
+      { id: "amendoim", name: "Amendoim", price: 0, premium: false, active: true },
+      { id: "pacoca", name: "Paçoca", price: 0, premium: false, active: true },
+      { id: "leite-po", name: "Leite em pó", price: 0, premium: false, active: true },
+      { id: "confete", name: "Confete", price: 0, premium: false, active: true },
+      { id: "coco", name: "Coco ralado", price: 0, premium: false, active: true },
+      { id: "leite-condensado", name: "Leite condensado", price: 0, premium: false, active: true },
+      { id: "bis", name: "Bis", price: 0, premium: false, active: true },
+      { id: "morango", name: "Morango", price: 3, premium: true, active: true },
+      { id: "kiwi", name: "Kiwi", price: 3, premium: true, active: true },
+      { id: "creme-avela", name: "Creme de avelã", price: 3, premium: true, active: true },
+      { id: "oreo", name: "Oreo (bolacha)", price: 3, premium: true, active: true }
+    ],
+    neighborhoods: [
+      ["Aeroporto",13],["Água Branca",14],["Água Branca M",15],["Alto da Julio",12],["Alvorada",10],["Bom Pastor",13],["Cango",10],["Cantelmo",14],["Centro",10],["Centro M",30],["Cristo Rei",10],["Guanabara",11],["Industrial",12],["Ipiranga M",30],["Jardim Floresta",14],["Jardim Itália",12],["Primavera",14],["Seminário",13],["Virgínia",12],["Júpiter",14],["Kennedy",10],["Marmeleiro",30],["Marrecas",12],["Miniguaçu",14],["Monte Rey",12],["Nortão",20],["Nossa Senhora",10],["Nova Petrópolis",12],["Novo Horizonte",12],["Novo Mundo",12],["Padre Ulrico",14],["Passarela M",30],["Pedra Branca M",18],["Pinheirão",15],["Pinheirinho",14],["Raffer",13],["Sadia",15],["Santa Bárbara",20],["São Cristóvão",12],["São Francisco",11],["São Marcos",18],["São Miguel",12],["Terra Nossa",15],["Vila Nova",12]
+    ].map(([name, fee], index) => ({ id: `zone-${index+1}`, name, fee, active: true }))
+  };
+
+  let catalog = structuredClone(defaults);
+  let cart = loadCart();
+  let category = "all";
+  let currentProduct = null;
+  let freeSelected = new Set();
+  let premiumSelected = new Set();
+  let quantity = 1;
+  let deliveryMode = "delivery";
+  let payment = "pix";
+
+  const $ = (id) => document.getElementById(id);
+  const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+  function money(value) { return BRL.format(Number(value || 0)); }
+  function escapeHtml(value = "") { return String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+  function slugLabel(cat) { return cat === "marmita" ? "Marmita" : "Açaí"; }
+  function showToast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove("show"), 2600); }
+
+  function loadCart() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+  }
+  function saveCart() { localStorage.setItem(STORAGE_KEY, JSON.stringify(cart)); renderCartBadge(); renderCart(); }
+
+  async function loadRemoteCatalog() {
+    const cfg = window.ACAI_MOVI_CONFIG || {};
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) return;
+    try {
+      const client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+      const [products, complements, zones, settings] = await Promise.all([
+        client.from("products").select("*").order("sort_order"),
+        client.from("complements").select("*").order("sort_order"),
+        client.from("delivery_zones").select("*").order("name"),
+        client.from("store_settings").select("data").eq("id", "main").maybeSingle()
+      ]);
+      if (!products.error && products.data?.length) catalog.products = products.data;
+      if (!complements.error && complements.data?.length) catalog.complements = complements.data;
+      if (!zones.error && zones.data?.length) catalog.neighborhoods = zones.data;
+      if (!settings.error && settings.data?.data) catalog.store = { ...catalog.store, ...settings.data.data };
+    } catch (error) { console.warn("Catálogo remoto indisponível; usando dados locais.", error); }
+  }
+
+  function renderProducts() {
+    const search = $("searchInput").value.trim().toLowerCase();
+    const products = catalog.products.filter(p => p.active !== false).filter(p => category === "all" || p.category === category).filter(p => !search || `${p.name} ${p.description}`.toLowerCase().includes(search));
+    $("productGrid").innerHTML = products.length ? products.map(p => `
+      <article class="product-card ${p.featured ? "featured" : ""}" data-id="${escapeHtml(p.id)}" tabindex="0">
+        <div class="product-image-wrap">
+          ${p.featured ? '<span class="badge">⭐ Mais pedido</span>' : ''}
+          <img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" />
+        </div>
+        <div class="product-body">
+          <span class="product-category">${slugLabel(p.category)}</span>
+          <h3>${escapeHtml(p.name)}</h3>
+          <p>${escapeHtml(p.description)}</p>
+          <div class="product-bottom"><strong>${money(p.price)}</strong><button type="button" data-open-product="${escapeHtml(p.id)}">Adicionar</button></div>
+        </div>
+      </article>
+    `).join("") : '<div class="empty-products"><span>🔎</span><strong>Nenhum item encontrado</strong><p>Tente buscar por outro nome.</p></div>';
+
+    qsa("[data-open-product]").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); openProduct(btn.dataset.openProduct); }));
+    qsa(".product-card").forEach(card => {
+      card.addEventListener("click", () => openProduct(card.dataset.id));
+      card.addEventListener("keydown", e => { if (e.key === "Enter") openProduct(card.dataset.id); });
+    });
+  }
+
+  function renderComplementShowcase() {
+    $("complementShowcase").innerHTML = catalog.complements.filter(c => c.active !== false).map(c => `<span class="showcase-pill ${Number(c.price) > 0 ? "premium" : ""}">${escapeHtml(c.name)}${Number(c.price) > 0 ? ` <b>+${money(c.price)}</b>` : ""}</span>`).join("");
+  }
+
+  function renderZones() {
+    const active = catalog.neighborhoods.filter(z => z.active !== false).sort((a,b) => Number(a.fee)-Number(b.fee));
+    $("zonePreview").innerHTML = active.slice(0, 7).map(z => `<div><span>${escapeHtml(z.name)}</span><strong>${money(z.fee)}</strong></div>`).join("") + `<button type="button" id="showAllZones">Ver ${active.length} bairros</button>`;
+    $("neighborhoodSelect").innerHTML = '<option value="">Selecione o bairro</option>' + active.sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(z => `<option value="${escapeHtml(z.id)}">${escapeHtml(z.name)} — ${money(z.fee)}</option>`).join("");
+    $("showAllZones")?.addEventListener("click", () => { openCart(); setTimeout(() => $("neighborhoodSelect").focus(), 100); });
+  }
+
+  function storeHour() {
+    const parts = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+    const hour = Number(parts.find(p => p.type === "hour")?.value || 0);
+    const minute = Number(parts.find(p => p.type === "minute")?.value || 0);
+    const current = hour * 60 + minute;
+    const open = current >= 13*60 && current < 22*60;
+    const el = $("storeStatus"); el.classList.toggle("closed", !open); el.querySelector("b").textContent = open ? "Aberto até 22h" : "Fechado • abre às 13h";
+  }
+
+  function openProduct(id) {
+    currentProduct = catalog.products.find(p => p.id === id); if (!currentProduct) return;
+    freeSelected = new Set(); premiumSelected = new Set(); quantity = 1;
+    $("itemNotes").value = "";
+    $("modalProductImage").src = currentProduct.image_url;
+    $("modalProductImage").alt = currentProduct.name;
+    $("productModalTitle").textContent = currentProduct.name;
+    $("modalProductDescription").textContent = currentProduct.description;
+    $("modalBasePrice").textContent = money(currentProduct.price);
+    $("freeRuleText").textContent = `Escolha exatamente ${currentProduct.free_limit} opções. Essa etapa é obrigatória.`;
+    renderBuilder();
+    $("productOverlay").hidden = false;
+    document.body.classList.add("no-scroll");
+  }
+
+  function closeProduct() { $("productOverlay").hidden = true; currentProduct = null; document.body.classList.remove("no-scroll"); }
+
+  function renderBuilder() {
+    const free = catalog.complements.filter(c => c.active !== false && Number(c.price) === 0);
+    const premium = catalog.complements.filter(c => c.active !== false && Number(c.price) > 0);
+    $("freeChoices").innerHTML = free.map(c => `<button type="button" class="choice ${freeSelected.has(c.id)?"selected":""}" data-free="${escapeHtml(c.id)}"><span class="check">✓</span><b>${escapeHtml(c.name)}</b><small>Incluso</small></button>`).join("");
+    $("premiumChoices").innerHTML = premium.map(c => `<button type="button" class="choice premium ${premiumSelected.has(c.id)?"selected":""}" data-premium="${escapeHtml(c.id)}"><span class="check">✓</span><b>${escapeHtml(c.name)}</b><small>+ ${money(c.price)}</small></button>`).join("");
+    $("freeCounter").textContent = `${freeSelected.size}/${currentProduct.free_limit}`;
+    $("freeCounter").classList.toggle("done", freeSelected.size === Number(currentProduct.free_limit));
+    $("qtyValue").textContent = quantity;
+    const premiumTotal = [...premiumSelected].reduce((sum,id) => sum + Number(catalog.complements.find(c=>c.id===id)?.price || 0),0);
+    $("addButtonTotal").textContent = money((Number(currentProduct.price)+premiumTotal)*quantity);
+    $("addToCartBtn").disabled = freeSelected.size !== Number(currentProduct.free_limit);
+
+    qsa("[data-free]", $("freeChoices")).forEach(btn => btn.addEventListener("click", () => {
+      const id = btn.dataset.free;
+      if (freeSelected.has(id)) freeSelected.delete(id);
+      else if (freeSelected.size < Number(currentProduct.free_limit)) freeSelected.add(id);
+      else showToast(`Você já escolheu ${currentProduct.free_limit} complementos inclusos.`);
+      renderBuilder();
+    }));
+    qsa("[data-premium]", $("premiumChoices")).forEach(btn => btn.addEventListener("click", () => { const id=btn.dataset.premium; premiumSelected.has(id)?premiumSelected.delete(id):premiumSelected.add(id); renderBuilder(); }));
+  }
+
+  function addCurrentToCart() {
+    if (!currentProduct || freeSelected.size !== Number(currentProduct.free_limit)) return;
+    const premiums = [...premiumSelected];
+    const premiumUnit = premiums.reduce((sum,id)=>sum+Number(catalog.complements.find(c=>c.id===id)?.price || 0),0);
+    cart.push({
+      key: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      product_id: currentProduct.id,
+      name: currentProduct.name,
+      image_url: currentProduct.image_url,
+      base_price: Number(currentProduct.price),
+      unit_price: Number(currentProduct.price)+premiumUnit,
+      quantity,
+      free: [...freeSelected],
+      premium: premiums,
+      notes: $("itemNotes").value.trim()
+    });
+    saveCart(); closeProduct(); showToast("Item adicionado ao pedido."); openCart();
+  }
+
+  function cartSubtotal() { return cart.reduce((sum,i)=>sum + Number(i.unit_price)*Number(i.quantity),0); }
+  function selectedZone() { return catalog.neighborhoods.find(z => z.id === $("neighborhoodSelect").value); }
+  function deliveryFee() { return deliveryMode === "delivery" ? Number(selectedZone()?.fee || 0) : 0; }
+  function grandTotal() { return cartSubtotal() + deliveryFee(); }
+
+  function renderCartBadge() {
+    const count = cart.reduce((sum,i)=>sum+Number(i.quantity),0);
+    $("cartCount").textContent = count; $("mobileCartCount").textContent = count; $("mobileCartTotal").textContent = money(cartSubtotal());
+    $("mobileCartBar").hidden = count === 0;
+  }
+
+  function renderCart() {
+    const content = $("cartContent");
+    if (!cart.length) {
+      content.innerHTML = '<div class="empty-cart"><span>🛍️</span><h3>Seu pedido está vazio</h3><p>Escolha um açaí no cardápio para começar.</p><button type="button" id="backToMenu">Ver cardápio</button></div>';
+      $("checkoutPanel").hidden = true;
+      $("backToMenu")?.addEventListener("click", () => { closeCart(); document.querySelector("#cardapio").scrollIntoView({behavior:"smooth"}); });
+      return;
+    }
+    content.innerHTML = `<div class="cart-list">${cart.map(item => {
+      const freeNames = item.free.map(id => catalog.complements.find(c=>c.id===id)?.name).filter(Boolean).join(", ");
+      const premiumNames = item.premium.map(id => catalog.complements.find(c=>c.id===id)?.name).filter(Boolean).join(", ");
+      return `<article class="cart-item">
+        <img src="${escapeHtml(item.image_url)}" alt="" />
+        <div class="cart-item-info"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(freeNames)}</small>${premiumNames?`<small>Extras: ${escapeHtml(premiumNames)}</small>`:""}${item.notes?`<small>Obs.: ${escapeHtml(item.notes)}</small>`:""}<b>${money(item.unit_price * item.quantity)}</b></div>
+        <div class="cart-item-actions"><button type="button" data-dec="${item.key}">−</button><span>${item.quantity}</span><button type="button" data-inc="${item.key}">+</button><button class="remove-item" type="button" data-remove="${item.key}">Remover</button></div>
+      </article>`;
+    }).join("")}</div>`;
+    $("checkoutPanel").hidden = false;
+    qsa("[data-dec]").forEach(b=>b.addEventListener("click",()=>changeItemQty(b.dataset.dec,-1)));
+    qsa("[data-inc]").forEach(b=>b.addEventListener("click",()=>changeItemQty(b.dataset.inc,1)));
+    qsa("[data-remove]").forEach(b=>b.addEventListener("click",()=>{cart=cart.filter(i=>i.key!==b.dataset.remove);saveCart();}));
+    renderSummary();
+  }
+
+  function changeItemQty(key, delta) { cart = cart.flatMap(i => i.key !== key ? [i] : (i.quantity + delta <= 0 ? [] : [{...i,quantity:i.quantity+delta}])); saveCart(); }
+
+  function renderSummary() {
+    if (!cart.length) return;
+    const fee = deliveryFee();
+    $("summaryBox").innerHTML = `<div><span>Subtotal</span><strong>${money(cartSubtotal())}</strong></div><div><span>${deliveryMode === "delivery" ? "Entrega" : "Retirada"}</span><strong>${deliveryMode === "delivery" ? (selectedZone()?money(fee):"Selecione o bairro") : "Grátis"}</strong></div><div class="summary-total"><span>Total</span><strong>${money(grandTotal())}</strong></div>`;
+    $("checkoutTotal").textContent = money(grandTotal());
+    $("deliveryFields").hidden = deliveryMode === "pickup";
+    $("changeField").hidden = payment !== "cash";
+  }
+
+  function openCart() { $("cartOverlay").hidden = false; document.body.classList.add("no-scroll"); renderCart(); }
+  function closeCart() { $("cartOverlay").hidden = true; document.body.classList.remove("no-scroll"); }
+
+  function validateCheckout() {
+    if (!cart.length) return "Seu pedido está vazio.";
+    if (!$("customerName").value.trim()) return "Informe seu nome.";
+    if (!$("customerPhone").value.trim()) return "Informe seu telefone.";
+    if (deliveryMode === "delivery") {
+      if (!selectedZone()) return "Selecione o bairro da entrega.";
+      if (!$("streetInput").value.trim()) return "Informe a rua.";
+      if (!$("numberInput").value.trim()) return "Informe o número.";
+    }
+    return "";
+  }
+
+  function buildOrderMessage() {
+    const id = `MV-${String(Date.now()).slice(-6)}`;
+    const lines = [
+      `🍧 *NOVO PEDIDO — AÇAÍ MOVÍ*`,
+      `Pedido: *${id}*`,
+      ``,
+      ...cart.flatMap((item,index)=>{
+        const free = item.free.map(id=>catalog.complements.find(c=>c.id===id)?.name).filter(Boolean);
+        const premium = item.premium.map(id=>{const c=catalog.complements.find(x=>x.id===id);return c?`${c.name} (+${money(c.price)})`:null;}).filter(Boolean);
+        return [
+          `*${index+1}. ${item.quantity}x ${item.name}* — ${money(item.unit_price*item.quantity)}`,
+          `Inclusos: ${free.join(", ")}`,
+          premium.length ? `Extras: ${premium.join(", ")}` : null,
+          item.notes ? `Obs. item: ${item.notes}` : null,
+          ``
+        ].filter(v=>v!==null);
+      }),
+      `👤 *Cliente:* ${$("customerName").value.trim()}`,
+      `📱 *Telefone:* ${$("customerPhone").value.trim()}`,
+      deliveryMode === "pickup" ? `🏪 *Retirada no local*` : `📍 *Entrega:* ${selectedZone().name} — ${money(selectedZone().fee)}`,
+      deliveryMode === "delivery" ? `🏠 *Endereço:* ${$("streetInput").value.trim()}, ${$("numberInput").value.trim()}${$("addressComplement").value.trim()?` — ${$("addressComplement").value.trim()}`:""}` : null,
+      deliveryMode === "delivery" && $("referenceInput").value.trim() ? `🧭 *Referência:* ${$("referenceInput").value.trim()}` : null,
+      `💳 *Pagamento:* ${payment === "pix" ? "PIX" : payment === "card" ? "Cartão" : "Dinheiro"}`,
+      payment === "cash" && $("changeInput").value.trim() ? `💵 *Troco para:* R$ ${$("changeInput").value.trim()}` : null,
+      $("orderNotes").value.trim() ? `📝 *Observação:* ${$("orderNotes").value.trim()}` : null,
+      ``,
+      `Subtotal: ${money(cartSubtotal())}`,
+      deliveryMode === "delivery" ? `Entrega: ${money(deliveryFee())}` : `Retirada: Grátis`,
+      `*TOTAL: ${money(grandTotal())}*`
+    ].filter(v=>v!==null);
+    return lines.join("\n");
+  }
+
+  async function finishOrder() {
+    const error = validateCheckout(); if (error) { showToast(error); return; }
+    const message = buildOrderMessage();
+    try { await navigator.clipboard.writeText(message); showToast("Pedido copiado. Abrindo WhatsApp..."); } catch { showToast("Abrindo WhatsApp..."); }
+    const target = catalog.store.whatsapp_url || whatsappUrl;
+    setTimeout(()=>window.open(target,"_blank","noopener,noreferrer"),180);
+  }
+
+  function bindEvents() {
+    $("searchInput").addEventListener("input", renderProducts);
+    qsa("[data-category]").forEach(btn => btn.addEventListener("click", () => { category=btn.dataset.category; qsa("[data-category]").forEach(x=>x.classList.toggle("active",x===btn)); renderProducts(); }));
+    $("closeProductBtn").addEventListener("click", closeProduct); $("productOverlay").addEventListener("click",e=>{if(e.target===$("productOverlay"))closeProduct();});
+    $("qtyMinus").addEventListener("click",()=>{quantity=Math.max(1,quantity-1);renderBuilder();}); $("qtyPlus").addEventListener("click",()=>{quantity+=1;renderBuilder();});
+    $("addToCartBtn").addEventListener("click",addCurrentToCart);
+    $("openCartBtn").addEventListener("click",openCart); $("mobileCartBar").addEventListener("click",openCart); $("closeCartBtn").addEventListener("click",closeCart); $("cartOverlay").addEventListener("click",e=>{if(e.target===$("cartOverlay"))closeCart();});
+    $("deliveryPreviewBtn").addEventListener("click",()=>{openCart();setTimeout(()=>$("neighborhoodSelect").focus(),100);});
+    qsa("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{deliveryMode=btn.dataset.mode;qsa("[data-mode]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
+    qsa("[data-payment]").forEach(btn=>btn.addEventListener("click",()=>{payment=btn.dataset.payment;qsa("[data-payment]").forEach(x=>x.classList.toggle("active",x===btn));renderSummary();}));
+    $("neighborhoodSelect").addEventListener("change",renderSummary);
+    $("finishOrderBtn").addEventListener("click",finishOrder);
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("productOverlay").hidden)closeProduct();else if(!$("cartOverlay").hidden)closeCart();}});
+  }
+
+  async function init() {
+    await loadRemoteCatalog();
+    renderProducts(); renderComplementShowcase(); renderZones(); renderCartBadge(); renderCart(); storeHour(); bindEvents();
+    setInterval(storeHour,60000);
+  }
+  init();
+})();
