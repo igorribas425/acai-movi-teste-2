@@ -100,6 +100,11 @@ try {
   ok((await page.locator("#loginError").innerText()).includes("Preencha e-mail e senha"), "Botão Primeiro acesso responde ao clique");
   ok(await page.locator("#firstAccessHelp").isVisible(), "Ajuda do primeiro acesso aparece");
 
+  await page.goto(base + "/confirmacao-acesso.html", { waitUntil: "networkidle" });
+  ok((await page.title()).includes("Acesso confirmado"), "Página profissional de confirmação existe");
+  ok(await page.locator(".confirm-card").isVisible(), "Tela de confirmação renderiza");
+  ok(await page.locator("#goAdminBtn").count() === 1, "Confirmação oferece acesso ao painel");
+
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mobile.goto(base + "/", { waitUntil: "networkidle" });
   ok(await mobile.locator(".product-card").count() === 4, "Cardápio carrega no celular");
