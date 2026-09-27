@@ -203,16 +203,36 @@
         <div class="checkout-block"><label><span>Observação do pedido</span><textarea id="orderNotes" rows="2" placeholder="Alguma observação geral?"></textarea></label></div>
 
         <div class="summary-box" id="summaryBox"></div>
-        <button class="whatsapp-checkout" id="finishOrderBtn" type="button">Finalizar no WhatsApp <strong id="checkoutTotal">R$ 0,00</strong></button>
-        <small class="checkout-hint">O resumo será copiado automaticamente. Se o WhatsApp não preencher a mensagem, basta colar no chat.</small>
+        <button class="whatsapp-checkout" id="finishOrderBtn" type="button">Confirmar pedido <strong id="checkoutTotal">R$ 0,00</strong></button>
+        <small class="checkout-hint">Depois de confirmar, você poderá acompanhar o pedido em tempo real.</small>
       </div>
     </aside>
+  </div>
+
+  <div class="order-success-overlay" id="orderSuccessOverlay" hidden>
+    <section class="order-success-card" role="dialog" aria-modal="true" aria-labelledby="orderSuccessTitle">
+      <div class="order-success-icon">✓</div>
+      <span class="order-success-kicker">Pedido confirmado</span>
+      <h2 id="orderSuccessTitle">Recebemos seu pedido 💜</h2>
+      <p>Agora você pode acompanhar cada etapa em tempo real.</p>
+      <div class="order-success-info">
+        <div><span>Número do pedido</span><strong id="successOrderNumber">—</strong></div>
+        <div><span>Total</span><strong id="successOrderTotal">—</strong></div>
+      </div>
+      <div class="order-success-status">
+        <span></span>
+        <div><strong>Pedido recebido</strong><small>Aguardando confirmação da equipe.</small></div>
+      </div>
+      <a class="track-order-btn" id="successTrackBtn" href="#">Acompanhar pedido</a>
+      <button class="whatsapp-secondary" id="successWhatsappBtn" type="button">Enviar resumo no WhatsApp</button>
+      <button class="continue-order-btn" id="successCloseBtn" type="button">Voltar ao cardápio</button>
+    </section>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=20260927-final2"></script>
+  <script src="app.js?v=20260927-ifood1"></script>
 </body>
 </html>
