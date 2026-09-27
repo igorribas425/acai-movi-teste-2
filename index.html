@@ -1,45 +1,216 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Açaí Moví - Produtos</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#5f167d" />
+  <meta name="description" content="Açaí Moví Delivery em Francisco Beltrão - PR. Monte seu açaí, escolha os complementos e peça pelo WhatsApp." />
+  <title>Açaí Moví | Delivery em Francisco Beltrão</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<section class="produtos">
-<h1>Escolha seu tamanho</h1>
-<div class="cards">
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Ir para o início">
+      <img src="images/logo.png" alt="Açaí Moví" />
+      <span class="brand-copy"><strong>Açaí Moví</strong><small>Delivery</small></span>
+    </a>
+    <div class="topbar-right">
+      <div class="store-status" id="storeStatus"><span></span><b>Verificando horário</b></div>
+      <a class="icon-link" href="https://www.instagram.com/acaimovi?stkn=MW56b3NqeTcxZTQ5Zw==" target="_blank" rel="noreferrer">Instagram</a>
+      <button class="cart-button" id="openCartBtn" type="button" aria-label="Abrir carrinho">
+        <span class="cart-icon">🛍️</span><span class="cart-label">Pedido</span><b id="cartCount">0</b>
+      </button>
+    </div>
+  </header>
 
-<div class="card">
-<img src="images/produto-300.png">
-<h2>Açaí 300ml</h2>
-<p>O tamanho perfeito para começar 💜</p>
-<strong>R$18,00</strong>
-</div>
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-content">
+        <span class="hero-kicker">🍧 Delivery em Francisco Beltrão • PR</span>
+        <h1>Seu açaí do seu jeito, <em>sem complicação.</em></h1>
+        <p>Escolha o tamanho, monte com seus complementos favoritos e finalize o pedido direto pelo WhatsApp.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#cardapio">Ver cardápio</a>
+          <a class="btn btn-ghost" href="#entrega">Ver entrega</a>
+        </div>
+        <div class="hero-info">
+          <span>🕐 Segunda a domingo</span>
+          <span>13h às 22h</span>
+          <span>💳 PIX • Cartão • Dinheiro</span>
+        </div>
+      </div>
+      <div class="hero-media">
+        <img src="images/hero-acai.png" alt="Açaí com complementos" />
+        <div class="hero-card">
+          <strong>Monte como quiser</strong>
+          <span>4 complementos nos copos • 6 na marmita</span>
+        </div>
+      </div>
+    </section>
 
-<div class="card destaque">
-<div class="selo">⭐ MAIS PEDIDO</div>
-<img src="images/produto-400.png">
-<h2>Açaí 400ml</h2>
-<p>O equilíbrio perfeito.</p>
-<strong>R$20,00</strong>
-</div>
+    <section class="browse" id="cardapio">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Cardápio</span>
+          <h2>O que você quer pedir hoje?</h2>
+        </div>
+        <p>Toque em um produto para montar seu pedido, igual em um app de delivery.</p>
+      </div>
 
-<div class="card">
-<img src="images/produto-500.png">
-<h2>Açaí 500ml</h2>
-<p>Nosso campeão de pedidos.</p>
-<strong>R$22,00</strong>
-</div>
+      <div class="browse-bar">
+        <label class="search-box">
+          <span>⌕</span>
+          <input id="searchInput" type="search" placeholder="Buscar no cardápio" autocomplete="off" />
+        </label>
+        <div class="chips" id="categoryChips">
+          <button class="chip active" type="button" data-category="all">Todos</button>
+          <button class="chip" type="button" data-category="cups">Copos</button>
+          <button class="chip" type="button" data-category="marmita">Marmita</button>
+        </div>
+      </div>
 
-<div class="card">
-<img src="images/produto-1kg.jpg">
-<h2>Marmita 1kg</h2>
-<p>Ideal para compartilhar.</p>
-<strong>R$45,00</strong>
-</div>
+      <div class="product-grid" id="productGrid"></div>
+    </section>
 
-</div>
-</section>
+    <section class="info-strip">
+      <article><span>🥄</span><div><strong>Complementos inclusos</strong><small>4 nos copos e 6 na marmita</small></div></article>
+      <article><span>✨</span><div><strong>Extras premium</strong><small>Morango, kiwi, Oreo e creme de avelã + R$ 3</small></div></article>
+      <article><span>📍</span><div><strong>Entrega por bairro</strong><small>Taxa calculada no fechamento</small></div></article>
+    </section>
+
+    <section class="premium-section" id="complementos">
+      <div class="premium-copy">
+        <span class="eyebrow light">Complementos</span>
+        <h2>Clássicos inclusos. Premium quando quiser.</h2>
+        <p>Os complementos premium não contam no limite obrigatório de complementos gratuitos.</p>
+        <div class="complement-list" id="complementShowcase"></div>
+      </div>
+      <div class="premium-media"><img src="images/monte-seu-acai.jpg" alt="Açaí com frutas" /></div>
+    </section>
+
+    <section class="delivery-section" id="entrega">
+      <div class="delivery-copy">
+        <span class="eyebrow">Entrega e retirada</span>
+        <h2>Entregamos em todos os bairros de Francisco Beltrão.</h2>
+        <p>Escolha seu bairro no fechamento do pedido. A taxa entra automaticamente no total. Também temos retirada no local, sem taxa.</p>
+        <div class="delivery-actions">
+          <button class="btn btn-primary" id="deliveryPreviewBtn" type="button">Consultar minha taxa</button>
+          <span>Taxas a partir de <strong>R$ 10,00</strong></span>
+        </div>
+      </div>
+      <div class="zone-card">
+        <div class="zone-card-head"><span>📍</span><div><strong>Taxas por bairro</strong><small>Francisco Beltrão e região</small></div></div>
+        <div class="zone-preview" id="zonePreview"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand"><img src="images/logo.png" alt="Açaí Moví" /><div><strong>Açaí Moví</strong><span>Francisco Beltrão • Paraná</span></div></div>
+    <div class="footer-links">
+      <a href="https://www.instagram.com/acaimovi?stkn=MW56b3NqeTcxZTQ5Zw==" target="_blank" rel="noreferrer">Instagram</a>
+      <a href="https://wa.me/message/KONPQZAX7CH2L1" target="_blank" rel="noreferrer">WhatsApp</a>
+      <a href="admin.html">Admin</a>
+    </div>
+    <small>Segunda a domingo • 13h às 22h</small>
+  </footer>
+
+  <button class="mobile-cart-bar" id="mobileCartBar" type="button" hidden>
+    <span><b id="mobileCartCount">0</b> item(ns)</span>
+    <strong>Ver pedido</strong>
+    <span id="mobileCartTotal">R$ 0,00</span>
+  </button>
+
+  <a class="floating-whatsapp" href="https://wa.me/message/KONPQZAX7CH2L1" target="_blank" rel="noreferrer" aria-label="Abrir WhatsApp">💬</a>
+
+  <div class="overlay" id="productOverlay" hidden>
+    <section class="product-modal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+      <button class="close-btn" id="closeProductBtn" type="button" aria-label="Fechar">×</button>
+      <div class="product-modal-top">
+        <img id="modalProductImage" alt="" />
+        <div>
+          <span class="eyebrow">Monte seu pedido</span>
+          <h2 id="productModalTitle"></h2>
+          <p id="modalProductDescription"></p>
+          <strong class="modal-price" id="modalBasePrice"></strong>
+        </div>
+      </div>
+
+      <div class="builder-section">
+        <div class="builder-head">
+          <div><h3>Escolha os complementos inclusos</h3><p id="freeRuleText"></p></div>
+          <span class="counter" id="freeCounter">0/4</span>
+        </div>
+        <div class="choice-grid" id="freeChoices"></div>
+      </div>
+
+      <div class="builder-section">
+        <div class="builder-head"><div><h3>Quer adicionar extras?</h3><p>Opcionais • + R$ 3,00 cada • não contam no limite acima.</p></div></div>
+        <div class="choice-grid" id="premiumChoices"></div>
+      </div>
+
+      <div class="builder-section compact">
+        <label class="notes-field"><span>Observação do item (opcional)</span><textarea id="itemNotes" rows="2" placeholder="Ex.: sem leite condensado por cima"></textarea></label>
+      </div>
+
+      <div class="modal-footer">
+        <div class="qty-control"><button id="qtyMinus" type="button">−</button><strong id="qtyValue">1</strong><button id="qtyPlus" type="button">+</button></div>
+        <button class="add-cart-btn" id="addToCartBtn" type="button" disabled><span>Adicionar</span><strong id="addButtonTotal">R$ 0,00</strong></button>
+      </div>
+    </section>
+  </div>
+
+  <div class="drawer-overlay" id="cartOverlay" hidden>
+    <aside class="cart-drawer" aria-label="Seu pedido">
+      <div class="drawer-header"><div><span>Seu pedido</span><h2>Açaí Moví</h2></div><button class="close-btn" id="closeCartBtn" type="button">×</button></div>
+      <div class="cart-content" id="cartContent"></div>
+      <div class="checkout-panel" id="checkoutPanel" hidden>
+        <div class="checkout-block">
+          <h3>Como você quer receber?</h3>
+          <div class="segmented"><button type="button" class="active" data-mode="delivery">Entrega</button><button type="button" data-mode="pickup">Retirada</button></div>
+        </div>
+
+        <div class="checkout-block">
+          <h3>Seus dados</h3>
+          <div class="field-grid">
+            <label><span>Nome *</span><input id="customerName" type="text" autocomplete="name" placeholder="Seu nome" /></label>
+            <label><span>Telefone *</span><input id="customerPhone" type="tel" autocomplete="tel" placeholder="(46) 99999-9999" /></label>
+          </div>
+        </div>
+
+        <div class="checkout-block" id="deliveryFields">
+          <h3>Endereço de entrega</h3>
+          <label><span>Bairro *</span><select id="neighborhoodSelect"><option value="">Selecione o bairro</option></select></label>
+          <div class="field-grid">
+            <label class="wide"><span>Rua *</span><input id="streetInput" type="text" autocomplete="street-address" placeholder="Nome da rua" /></label>
+            <label><span>Número *</span><input id="numberInput" type="text" inputmode="numeric" placeholder="Nº" /></label>
+            <label><span>Complemento</span><input id="addressComplement" type="text" placeholder="Apto, casa..." /></label>
+          </div>
+          <label><span>Ponto de referência</span><input id="referenceInput" type="text" placeholder="Ex.: perto do mercado" /></label>
+        </div>
+
+        <div class="checkout-block">
+          <h3>Pagamento</h3>
+          <div class="segmented three" id="paymentSelector"><button type="button" class="active" data-payment="pix">PIX</button><button type="button" data-payment="card">Cartão</button><button type="button" data-payment="cash">Dinheiro</button></div>
+          <label id="changeField" hidden><span>Troco para quanto?</span><input id="changeInput" type="text" inputmode="decimal" placeholder="Ex.: 50,00" /></label>
+        </div>
+
+        <div class="checkout-block"><label><span>Observação do pedido</span><textarea id="orderNotes" rows="2" placeholder="Alguma observação geral?"></textarea></label></div>
+
+        <div class="summary-box" id="summaryBox"></div>
+        <button class="whatsapp-checkout" id="finishOrderBtn" type="button">Finalizar no WhatsApp <strong id="checkoutTotal">R$ 0,00</strong></button>
+        <small class="checkout-hint">O resumo será copiado automaticamente. Se o WhatsApp não preencher a mensagem, basta colar no chat.</small>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
