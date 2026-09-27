@@ -67,6 +67,7 @@ try {
   await page.locator("#streetInput").fill("Rua Teste");
   await page.locator("#numberInput").fill("123");
   ok((await page.locator("#checkoutTotal").innerText()).includes("31,00"), "Taxa do Centro soma R$ 10");
+  ok((await page.locator("#paymentHelp").innerText()).includes("aguardando"), "Checkout explica o fluxo do PIX");
 
   await page.evaluate(() => {
     window.__opened = [];
@@ -86,12 +87,14 @@ try {
   ok(Number(savedOrder?.delivery_fee) === 10, "Pedido salva taxa de R$ 10");
   ok(Number(savedOrder?.total) === 31, "Pedido salva total de R$ 31");
   ok(Array.isArray(savedOrder?.items) && savedOrder.items.length === 1, "Pedido salva os itens");
+  ok(typeof savedOrder?.tracking_token === "string" && savedOrder.tracking_token.length > 20, "Pedido gera token de acompanhamento");
   const copied = await page.evaluate(() => window.__copied || "");
   const opened = await page.evaluate(() => window.__opened || []);
   ok(copied.includes("Açaí 300ml"), "Resumo contém o produto");
   ok(copied.includes("Centro"), "Resumo contém o bairro");
   ok(copied.includes("R$ 31,00") || copied.includes("R$ 31,00"), "Resumo contém total");
   ok(copied.includes("PIX"), "Resumo contém pagamento");
+  ok(copied.includes("acompanhar-pedido.html?token="), "Resumo contém link de acompanhamento");
   ok(opened.some(u => String(u).includes("wa.me/message/KONPQZAX7CH2L1")), "Abre WhatsApp correto");
 
   await page.locator('[data-mode="pickup"]').click();
@@ -122,6 +125,40 @@ try {
   ok((await page.title()).includes("Acesso confirmado"), "Página profissional de confirmação existe");
   ok(await page.locator(".confirm-card").isVisible(), "Tela de confirmação renderiza");
   ok(await page.locator("#goAdminBtn").count() === 1, "Confirmação oferece acesso ao painel");
+
+  let deliveryConfirmed = false;
+  await context.route("**/rest/v1/rpc/get_order_tracking", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify([{
+      order_number: "MV-TRACK-001",
+      status: deliveryConfirmed ? "delivered" : "out_for_delivery",
+      payment: "card",
+      payment_status: deliveryConfirmed ? "paid" : "pay_on_delivery",
+      customer_name: "Cliente Teste",
+      delivery_mode: "delivery",
+      neighborhood: "Centro",
+      total: 31,
+      created_at: new Date().toISOString(),
+      delivered_confirmed_by_customer: deliveryConfirmed
+    }])
+  }));
+  await context.route("**/rest/v1/rpc/confirm_order_delivery", route => {
+    deliveryConfirmed = true;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{order_number:"MV-TRACK-001",status:"delivered",payment_status:"paid",delivered_at:new Date().toISOString()}])
+    });
+  });
+  await page.goto(base + "/acompanhar-pedido.html?token=11111111-1111-4111-8111-111111111111", { waitUntil: "networkidle" });
+  ok((await page.locator("#mainStatus").innerText()).includes("Saiu para entrega"), "Cliente vê saída para entrega");
+  ok(await page.locator("#confirmDeliveryBtn").isVisible(), "Cliente recebe botão de confirmar recebimento");
+  await page.locator("#confirmDeliveryBtn").click();
+  await page.waitForTimeout(250);
+  ok(deliveryConfirmed, "Confirmação do cliente chama o fluxo de entrega");
+  ok((await page.locator("#mainStatus").innerText()).includes("Entregue"), "Pedido muda para Entregue após confirmação");
+  ok((await page.locator("#paymentState").innerText()).includes("confirmado"), "Pagamento na entrega é concluído com o recebimento");
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mobile.goto(base + "/", { waitUntil: "networkidle" });
