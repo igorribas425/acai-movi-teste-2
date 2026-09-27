@@ -7,6 +7,15 @@ const context = await browser.newContext({
   permissions: ["clipboard-read", "clipboard-write", "geolocation"],
   geolocation: { latitude: -26.0810, longitude: -53.0550 }
 });
+let capturedOrder = null;
+await context.route("**/rest/v1/orders*", async route => {
+  if (route.request().method() === "POST") {
+    capturedOrder = route.request().postDataJSON();
+    await route.fulfill({ status: 201, contentType: "application/json", body: "[]" });
+    return;
+  }
+  await route.continue();
+});
 await context.route("https://nominatim.openstreetmap.org/**", route => route.fulfill({
   status: 200,
   contentType: "application/json",
@@ -69,7 +78,14 @@ try {
   });
 
   await page.locator("#finishOrderBtn").click();
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(650);
+  const savedOrder = Array.isArray(capturedOrder) ? capturedOrder[0] : capturedOrder;
+  ok(Boolean(savedOrder), "Pedido é salvo antes de abrir o WhatsApp");
+  ok(savedOrder?.status === "new", "Pedido entra como Novo");
+  ok(savedOrder?.neighborhood === "Centro", "Pedido salva o bairro");
+  ok(Number(savedOrder?.delivery_fee) === 10, "Pedido salva taxa de R$ 10");
+  ok(Number(savedOrder?.total) === 31, "Pedido salva total de R$ 31");
+  ok(Array.isArray(savedOrder?.items) && savedOrder.items.length === 1, "Pedido salva os itens");
   const copied = await page.evaluate(() => window.__copied || "");
   const opened = await page.evaluate(() => window.__opened || []);
   ok(copied.includes("Açaí 300ml"), "Resumo contém o produto");
@@ -96,6 +112,8 @@ try {
   await page.goto(base + "/painel-movi-gestao.html", { waitUntil: "networkidle" });
   ok(await page.locator("#loginScreen").isVisible(), "Painel ADM conectado e exige login");
   ok(await page.locator("#setupScreen").isHidden(), "Painel não está em modo sem banco");
+  ok(await page.locator('[data-section="orders"]').count() === 1, "Central de Pedidos existe no ADM");
+  ok(await page.locator('[data-tab="orders"]').count() === 1, "Menu Pedidos existe no ADM");
   await page.locator("#firstAccessBtn").click();
   ok((await page.locator("#loginError").innerText()).includes("Preencha e-mail e senha"), "Botão Primeiro acesso responde ao clique");
   ok(await page.locator("#firstAccessHelp").isVisible(), "Ajuda do primeiro acesso aparece");
