@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#64167d" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>Acompanhar pedido | Açaí Moví</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="acompanhar.css" />
+</head>
+<body>
+  <main class="tracking-page">
+    <section class="tracking-card">
+      <header class="tracking-header">
+        <div class="brand"><img src="images/logo.png" alt="Açaí Moví" /><div><strong>Açaí Moví</strong><span>Acompanhamento do pedido</span></div></div>
+        <span class="live-dot">● Atualização automática</span>
+      </header>
+
+      <div class="loading-state" id="loadingState">
+        <div class="loader"></div><strong>Buscando seu pedido...</strong><span>Aguarde alguns segundos.</span>
+      </div>
+
+      <div id="trackingContent" hidden>
+        <section class="order-hero">
+          <span class="eyebrow">Seu pedido</span>
+          <h1 id="orderNumber">—</h1>
+          <p id="customerGreeting"></p>
+          <div class="status-pill" id="mainStatus">Pedido recebido</div>
+        </section>
+
+        <section class="payment-card">
+          <div><span>Pagamento</span><strong id="paymentMethod">—</strong></div>
+          <div class="payment-state" id="paymentState">—</div>
+        </section>
+
+        <section class="timeline" id="timeline">
+          <article data-step="new"><span>1</span><div><strong>Pedido recebido</strong><small>Seu pedido chegou para a Açaí Moví.</small></div></article>
+          <article data-step="confirmed"><span>2</span><div><strong>Pedido confirmado</strong><small>A equipe aceitou o pedido.</small></div></article>
+          <article data-step="preparing"><span>3</span><div><strong>Preparando</strong><small>Seu açaí está sendo preparado.</small></div></article>
+          <article data-step="out_for_delivery"><span>4</span><div><strong>Saiu para entrega</strong><small>O entregador está a caminho.</small></div></article>
+          <article data-step="delivered"><span>5</span><div><strong>Entregue</strong><small>Pedido recebido com sucesso.</small></div></article>
+        </section>
+
+        <section class="delivery-confirm" id="deliveryConfirm" hidden>
+          <span>📦</span>
+          <div><strong>Seu pedido chegou?</strong><p>Confirme somente depois que estiver com o pedido em mãos.</p></div>
+          <button id="confirmDeliveryBtn" type="button">Confirmar recebimento</button>
+        </section>
+
+        <section class="summary-mini">
+          <div><span>Recebimento</span><strong id="deliveryMode">—</strong></div>
+          <div><span>Bairro</span><strong id="neighborhood">—</strong></div>
+          <div><span>Total</span><strong id="orderTotal">—</strong></div>
+        </section>
+
+        <p class="updated-at" id="updatedAt"></p>
+      </div>
+
+      <div class="error-state" id="errorState" hidden>
+        <span>!</span><h2>Pedido não encontrado</h2><p>Esse link pode estar incorreto ou expirado. Confira o link recebido no pedido.</p>
+        <a href="index.html">Voltar ao cardápio</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js?v=20260927-5"></script>
+  <script src="acompanhar.js?v=20260927-5"></script>
+</body>
+</html>
