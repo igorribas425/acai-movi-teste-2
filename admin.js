@@ -36,7 +36,7 @@
   document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{
     document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===btn));
     document.querySelectorAll("[data-section]").forEach(s=>s.classList.toggle("active",s.dataset.section===btn.dataset.tab));
-    $("sectionTitle").textContent={orders:"Pedidos",products:"Produtos",complements:"Complementos",zones:"Entrega",store:"Loja"}[btn.dataset.tab];
+    $("sectionTitle").textContent={orders:"Pedidos",financeiro:"Financeiro",products:"Produtos",complements:"Complementos",zones:"Entrega",store:"Loja"}[btn.dataset.tab];
   }));
 
   async function loadAll(){
