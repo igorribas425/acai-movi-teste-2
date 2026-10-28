@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="admin.css" />
+  <link rel="stylesheet" href="admin-financeiro.css?v=1" />
 </head>
 <body>
   <main class="admin-app">
@@ -22,7 +23,7 @@
     </section>
 
     <section class="dashboard" id="dashboard" hidden>
-      <aside class="sidebar"><div class="side-brand"><img src="images/logo.png" alt="" /><div><strong>Açaí Moví</strong><small>Admin</small></div></div><nav><button class="active" data-tab="orders">Pedidos</button><button data-tab="products">Produtos</button><button data-tab="complements">Complementos</button><button data-tab="zones">Entrega</button><button data-tab="store">Loja</button></nav><button class="logout" id="logoutBtn">Sair</button></aside>
+      <aside class="sidebar"><div class="side-brand"><img src="images/logo.png" alt="" /><div><strong>Açaí Moví</strong><small>Admin</small></div></div><nav><button class="active" data-tab="orders">Pedidos</button><button data-tab="financeiro">Financeiro</button><button data-tab="products">Produtos</button><button data-tab="complements">Complementos</button><button data-tab="zones">Entrega</button><button data-tab="store">Loja</button></nav><button class="logout" id="logoutBtn">Sair</button></aside>
       <div class="dashboard-main">
         <header class="admin-top"><div><span>Painel administrativo</span><h1 id="sectionTitle">Pedidos</h1></div><div class="admin-status">● conectado</div></header>
 
@@ -44,6 +45,53 @@
           <div class="orders-list" id="ordersAdmin"></div>
         </section>
 
+
+        <section class="admin-section" data-section="financeiro">
+          <div class="finance-toolbar">
+            <p>Acompanhe os valores dos pedidos feitos no site. Somente pagamentos confirmados entram em <strong>Recebido</strong>.</p>
+            <div class="finance-actions">
+              <button type="button" id="financeRefresh">Atualizar valores</button>
+              <button type="button" id="financeExport" disabled>Exportar CSV</button>
+            </div>
+          </div>
+          <div class="finance-periods" aria-label="Período do relatório">
+            <button type="button" data-finance-period="today">Hoje</button>
+            <button type="button" data-finance-period="7days">7 dias</button>
+            <button type="button" data-finance-period="30days">30 dias</button>
+            <button type="button" data-finance-period="month" class="active">Este mês</button>
+          </div>
+          <div class="finance-date-range">
+            <label>Data inicial<input id="financeStart" type="date" /></label>
+            <label>Data final<input id="financeEnd" type="date" /></label>
+          </div>
+          <p class="finance-status" id="financeStatus" role="status" aria-live="polite">Selecione o período para consultar.</p>
+          <div class="finance-kpis" id="financeKpis"></div>
+          <div class="finance-grid">
+            <article class="finance-card">
+              <h2>Faturamento recebido</h2>
+              <p class="finance-description">Pagamentos confirmados, agrupados pela data em que o pedido foi feito.</p>
+              <div class="finance-bars" id="financeBars"></div>
+            </article>
+            <article class="finance-card">
+              <h2>Recebido por forma de pagamento</h2>
+              <p class="finance-description">PIX, cartão e dinheiro pagos.</p>
+              <div id="financePaymentMethods"></div>
+            </article>
+          </div>
+          <article class="finance-card">
+            <h2>Movimentações dos pedidos</h2>
+            <p class="finance-description">Os 100 pedidos mais recentes do período. Use o CSV para visualizar todos.</p>
+            <div class="finance-table-wrap">
+              <table class="finance-table">
+                <thead><tr><th>Pedido</th><th>Data</th><th>Pagamento</th><th>Situação</th><th>Valor</th></tr></thead>
+                <tbody id="financeTableBody"></tbody>
+              </table>
+            </div>
+            <p class="finance-footnote" id="financeTableCaption"></p>
+            <p class="finance-footnote">Valores brutos dos pedidos, incluindo taxa de entrega, sem descontar custos, taxas de cartão ou outras despesas. Pedidos cancelados ou estornados são excluídos do total recebido. Período definido pela data de criação do pedido.</p>
+          </article>
+        </section>
+
         <section class="admin-section" data-section="products"><div class="toolbar"><p>Edite preços, fotos, descrições, limites de complementos e disponibilidade.</p><button id="addProductBtn">+ Novo produto</button></div><div class="cards-grid" id="productsAdmin"></div></section>
         <section class="admin-section" data-section="complements"><div class="toolbar"><p>Gerencie os complementos inclusos e os extras pagos.</p><button id="addComplementBtn">+ Novo complemento</button></div><div class="table-card"><div class="table-head"><span>Nome</span><span>Preço</span><span>Ativo</span><span></span></div><div id="complementsAdmin"></div></div></section>
         <section class="admin-section" data-section="zones"><div class="toolbar"><p>Altere as taxas de entrega de qualquer bairro.</p><button id="addZoneBtn">+ Novo bairro</button></div><div class="table-card"><div class="table-head"><span>Bairro</span><span>Taxa</span><span>Ativo</span><span></span></div><div id="zonesAdmin"></div></div></section>
@@ -55,6 +103,7 @@
   <div class="admin-toast" id="adminToast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=20260927-final"></script>
-  <script src="admin.js?v=20260927-final4"></script>
+  <script src="admin.js?v=20261028-financeiro"></script>
+  <script src="admin-financeiro.js?v=1"></script>
 </body>
 </html>
