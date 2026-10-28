@@ -26,6 +26,7 @@
   const statusEl = $("financeStatus");
   let orders = [];
   let busy = false;
+  let queuedLoad = false;
 
   const methods = { pix:"PIX", card:"Cartão", cash:"Dinheiro" };
   const paymentMethod = order => methods[order.payment] || "Outro";
@@ -127,7 +128,7 @@
   }
 
   async function loadFinance() {
-    if (busy) return;
+    if (busy) { queuedLoad = true; return; }
     const start = periodStart.value;
     const end = periodEnd.value;
     if (!start || !end || start > end) {
@@ -171,6 +172,7 @@
     } finally {
       busy = false;
       $("financeRefresh").disabled = false;
+      if (queuedLoad) { queuedLoad = false; loadFinance(); }
     }
   }
 
